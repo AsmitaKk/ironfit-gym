@@ -1,0 +1,2179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard — IronFit Gym</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/pages.css" />
+  <script src="js/sql-storage-bridge.js"></script>
+  <script src="js/course-site.js"></script>
+  <style>
+    .table-full {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .table-full th,
+    .table-full td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .account-layout {
+      display: flex;
+      align-items: flex-start;
+      gap: 28px;
+      width: 100%;
+      position: relative;
+      isolation: isolate;
+    }
+
+    .account-sidebar {
+      flex: 0 0 260px;
+      position: relative;
+      z-index: 5;
+    }
+
+    .account-main {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      min-width: 0;
+      flex: 1;
+      width: auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (min-width: 769px) {
+      .account-layout {
+        align-items: stretch;
+      }
+
+      .account-sidebar {
+        position: sticky !important;
+        top: calc(var(--nav-h) + 20px) !important;
+        align-self: flex-start;
+        max-height: calc(100dvh - var(--nav-h) - 40px);
+        overflow-y: auto !important;
+      }
+
+      .account-main {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
+      }
+    }
+
+    .page-hero {
+      padding-top: calc(var(--nav-h) + 22px);
+      padding-bottom: 20px;
+    }
+
+    .page-hero-content h1 {
+      font-size: clamp(2.2rem, 4vw, 3.4rem);
+    }
+
+    .page-hero-content p {
+      margin-top: 10px;
+      max-width: 900px;
+    }
+
+    .admin-dashboard-section {
+      background: var(--clr-bg);
+      padding: 18px 0 26px;
+    }
+
+    .admin-header-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .admin-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 107, 53, 0.1);
+      border: 1px solid rgba(255, 107, 53, 0.2);
+      color: var(--clr-white);
+      font-size: 0.88rem;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+
+    .account-sidebar .sidebar-header {
+      padding: 18px 20px;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .account-sidebar .sidebar-avatar {
+      width: 52px;
+      height: 52px;
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    .account-sidebar .sidebar-name {
+      margin: 0;
+      line-height: 1.2;
+    }
+
+    .account-sidebar .sidebar-plan {
+      margin-top: 4px;
+    }
+
+    .account-sidebar .sidebar-nav {
+      padding: 10px;
+    }
+
+    .account-sidebar .sidebar-nav a {
+      padding: 11px 13px;
+      cursor: pointer;
+      pointer-events: auto;
+    }
+
+    #adminDashboardMain {
+      min-width: 0;
+      width: 100%;
+    }
+
+    #adminDashboardMain>.dashboard-module {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .dashboard-module {
+      width: 100%;
+    }
+
+    .panel-header {
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .nav-container {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    #desktop-nav {
+      flex-wrap: wrap;
+      gap: 14px 18px;
+      justify-content: flex-end;
+    }
+
+    .sidebar-nav {
+      display: grid;
+      gap: 6px;
+    }
+
+    .sidebar-nav a {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dash-stats {
+      display: grid;
+      gap: 15px;
+    }
+
+    .form-row {
+      display: grid;
+      gap: 14px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      min-width: 0;
+    }
+
+    #module-workout #workoutPlanFormWrap {
+      overflow: visible;
+      position: relative;
+      z-index: 50;
+    }
+
+    #module-workout #workoutPlanFormWrap .panel-body,
+    #module-workout #workoutPlanFormWrap form {
+      overflow: visible;
+      position: relative;
+    }
+
+    #module-workout #workoutPlanFormWrap select {
+      position: relative;
+      z-index: 60;
+    }
+
+    @media (max-width: 1440px) {
+      .page-hero {
+        padding: 72px 0 28px;
+      }
+
+      .page-hero-content h1 {
+        font-size: clamp(2.6rem, 4.5vw, 4rem);
+      }
+
+      .page-hero-content p {
+        max-width: 760px;
+        font-size: 0.98rem;
+      }
+
+      .section {
+        padding: 28px 0;
+      }
+
+      .account-layout {
+        gap: 20px;
+      }
+
+      .account-sidebar {
+        flex: 0 0 230px;
+      }
+
+      .panel-header {
+        padding: 16px 18px;
+      }
+
+      .panel-body {
+        padding: 18px;
+      }
+
+      .dash-stat-card {
+        padding: 16px;
+      }
+
+      .dsc-num {
+        font-size: 1.6rem;
+      }
+
+      .table-full th,
+      .table-full td {
+        padding: 8px 10px;
+        font-size: 0.92rem;
+      }
+
+      #module-workout .table-full,
+      #module-course .table-full,
+      #module-trainer .table-full,
+      #module-staff .table-full,
+      #module-notifications .table-full,
+      #module-qr-attendance .table-full {
+        min-width: 0 !important;
+        width: 100%;
+      }
+
+      #module-workout table.table-full {
+        min-width: 1040px !important;
+      }
+
+      #module-course table.table-full {
+        min-width: 780px !important;
+        table-layout: fixed;
+      }
+
+      #module-trainer table.table-full {
+        min-width: 760px !important;
+        table-layout: fixed;
+      }
+
+      #module-staff table.table-full {
+        min-width: 700px !important;
+        table-layout: fixed;
+      }
+
+      #module-notifications table.table-full {
+        min-width: 760px !important;
+        table-layout: fixed;
+      }
+
+      #module-qr-attendance table.table-full {
+        min-width: 800px !important;
+        table-layout: fixed;
+      }
+
+      #module-course .dash-stats,
+      #module-trainer .dash-stats,
+      #module-staff .dash-stats,
+      #module-notifications .dash-stats,
+      #module-qr-attendance .dash-stats {
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) !important;
+      }
+
+      #module-course .table-full th,
+      #module-course .table-full td,
+      #module-trainer .table-full th,
+      #module-trainer .table-full td,
+      #module-staff .table-full th,
+      #module-staff .table-full td,
+      #module-notifications .table-full th,
+      #module-notifications .table-full td,
+      #module-qr-attendance .table-full th,
+      #module-qr-attendance .table-full td {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+
+      #module-course .table-full td:last-child,
+      #module-trainer .table-full td:last-child,
+      #module-staff .table-full td:last-child,
+      #module-notifications .table-full td:last-child,
+      #module-qr-attendance .table-full td:last-child {
+        white-space: nowrap;
+      }
+
+      #module-course .table-full td:last-child *,
+      #module-trainer .table-full td:last-child *,
+      #module-staff .table-full td:last-child *,
+      #module-notifications .table-full td:last-child *,
+      #module-qr-attendance .table-full td:last-child * {
+        white-space: nowrap;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .nav-container {
+        align-items: flex-start;
+      }
+
+      .admin-header-meta {
+        width: 100%;
+        justify-content: flex-start;
+      }
+
+      .account-layout {
+        flex-direction: column;
+        gap: 18px;
+      }
+
+      .account-sidebar {
+        position: relative;
+        top: auto;
+        width: 100%;
+        flex: 1 1 auto;
+        max-height: none;
+        overflow-y: visible;
+      }
+
+      .account-main {
+        gap: 18px;
+        width: 100%;
+        max-height: none;
+        overflow-y: visible;
+        padding-right: 0;
+      }
+
+      .sidebar-nav a {
+        padding: 12px 14px;
+      }
+
+      .page-hero {
+        padding: calc(var(--nav-h) + 18px) 0 18px;
+      }
+
+      .page-hero-content h1 {
+        font-size: clamp(2rem, 8vw, 3rem);
+      }
+
+      .page-hero-content p {
+        font-size: 0.98rem;
+      }
+
+      .dash-stats {
+        grid-template-columns: 1fr !important;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr !important;
+      }
+
+      .panel-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .panel-header>div {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .panel-header .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .table-full {
+        min-width: 760px;
+      }
+
+      .account-panel {
+        overflow-x: auto;
+      }
+
+      .account-panel .panel-body {
+        min-width: 0;
+      }
+
+      .modal {
+        width: calc(100vw - 24px) !important;
+        max-width: none !important;
+        left: 12px !important;
+        right: 12px !important;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .nav-container .nav-logo .logo-text {
+        font-size: 1rem;
+      }
+
+      .page-hero-content h1 {
+        font-size: 2rem;
+      }
+
+      .sidebar-avatar {
+        width: 52px;
+        height: 52px;
+        font-size: 1rem;
+      }
+
+      .sidebar-nav a {
+        font-size: 0.95rem;
+      }
+
+      .table-full {
+        min-width: 680px;
+      }
+
+      .btn {
+        white-space: normal;
+      }
+    }
+  </style>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      initAdminAttendance();
+      renderPendingRegistrations();
+    });
+
+    function renderPendingRegistrations() {
+      const tbody = document.getElementById('pendingTableBody');
+      const emptyEl = document.getElementById('pendingEmpty');
+      if (!tbody) return;
+      const pending = loadFromStorage('pendingRegistrations');
+      tbody.innerHTML = '';
+      if (!pending || pending.length === 0) {
+        emptyEl.style.display = 'block';
+        return;
+      }
+      emptyEl.style.display = 'none';
+      pending.forEach(r => {
+        const row = `
+        <tr id="pending-${r.id}">
+          <td style="padding:12px 15px;">${r.username}</td>
+          <td style="padding:12px 15px;">${r.name}</td>
+          <td style="padding:12px 15px;">${r.role}</td>
+          <td style="padding:12px 15px;">${r.status}</td>
+          <td style="padding:12px 15px; text-align:right;">
+            <button class="btn btn-primary btn-sm" style="margin-right:4px;" onclick="approvePending('${r.id}')">Approve</button>
+            <button class="btn btn-outline btn-sm" style="color:#ff4d4d;" onclick="deletePending('${r.id}')">Delete</button>
+          </td>
+        </tr>
+      `;
+        tbody.insertAdjacentHTML('beforeend', row);
+      });
+    }
+
+    function approvePending(userId) {
+      const pending = loadFromStorage('pendingRegistrations');
+      const idx = pending.findIndex(u => u.id === userId);
+      if (idx === -1) return;
+      const user = pending.splice(idx, 1)[0];
+      const approved = loadFromStorage('approvedUsers');
+      approved.push({
+        id: user.id,
+        username: user.username,
+        password: user.password,
+        name: user.name,
+        role: user.role
+      });
+      saveToStorage('pendingRegistrations', pending);
+      saveToStorage('approvedUsers', approved);
+      renderPendingRegistrations();
+    }
+
+    function deletePending(userId) {
+      const pending = loadFromStorage('pendingRegistrations');
+      const newList = pending.filter(u => u.id !== userId);
+      saveToStorage('pendingRegistrations', newList);
+      renderPendingRegistrations();
+    }
+  </script>
+</head>
+
+<body class="dashboard-page">
+  <!-- HEADER -->
+  <header class="site-header" id="site-header">
+    <div class="nav-container">
+      <a href="index.php" class="nav-logo">
+        <div class="logo-icon"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24"
+            fill="currentColor">
+            <path
+              d="M11 15h2v4h-2zm3-8h2V3h-2zm0 8h2v4h-2zM4 11h3V2H4zm6-2h3V2h-3zm8 2h3V2h-3zm-3-4h2v2h-2zm-6 0h2v2H9z" />
+            <path d="M6 15h12v6H6z" opacity="0.5" />
+          </svg></div>
+        <div class="logo-text">IRON<span>FIT</span></div>
+      </a>
+      <div class="admin-header-meta">
+        <span class="admin-badge">Admin Dashboard</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-hero">
+    <div class="page-hero-content">
+      <h1>Admin Dashboard</h1>
+      <p>Manage memberships, trainers, attendance, courses, shift assignments, and gym-wide notifications.</p>
+    </div>
+  </section>
+
+  <section class="admin-dashboard-section section">
+    <div class="container">
+      <div class="account-layout">
+        <aside class="account-sidebar reveal">
+          <div class="sidebar-header">
+            <div class="sidebar-avatar">AD</div>
+            <div>
+              <div class="sidebar-name">Admin</div>
+              <div class="sidebar-plan">Dashboard Controls</div>
+            </div>
+          </div>
+          <nav class="sidebar-nav">
+            <a href="#overview" class="active" data-admin-module="overview"
+              onclick="switchAdminModule('overview', this); return false;"><svg class="inline-icon" width="1em"
+                height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;">
+                <rect x="3" y="3" width="7" height="7" />
+                <rect x="14" y="3" width="7" height="7" />
+                <rect x="14" y="14" width="7" height="7" />
+                <rect x="3" y="14" width="7" height="7" />
+              </svg> Overview</a>
+            <a href="#pending" data-admin-module="pending" onclick="switchAdminModule('pending', this); return false;"><svg
+                class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg> Pending Registrations</a>
+            <a href="#user" data-admin-module="user" onclick="switchAdminModule('user', this); return false;"><svg
+                class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg> User Mgmt</a>
+            <a href="#registration" data-admin-module="registration"
+              onclick="switchAdminModule('registration', this); return false;"><svg class="inline-icon" width="1em"
+                height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M19 8v6" />
+                <path d="M16 11h6" />
+              </svg> User Registration</a>
+            <a href="#workout" data-admin-module="workout" onclick="switchAdminModule('workout', this); return false;"><svg
+                class="inline-icon" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m6.5 6.5 11 11" />
+                <path d="m21 21-1-1" />
+                <path d="m3 3 1 1" />
+                <path d="m18 22 4-4" />
+                <path d="m2 6 4-4" />
+                <path d="m3 10 7-7" />
+                <path d="m14 21 7-7" />
+              </svg> Workout Plans</a>
+            <a href="#course" data-admin-module="course" onclick="switchAdminModule('course', this); return false;"><svg
+                class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;">
+                <circle cx="12" cy="12" r="10" />
+                <circle cx="12" cy="12" r="6" />
+                <circle cx="12" cy="12" r="2" />
+              </svg> Course Mgmt</a>
+            <a href="#trainer" data-admin-module="trainer" onclick="switchAdminModule('trainer', this); return false;"><svg
+                class="inline-icon" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m6.5 6.5 11 11" />
+                <path d="m21 21-1-1" />
+                <path d="m3 3 1 1" />
+                <path d="m18 22 4-4" />
+                <path d="m2 6 4-4" />
+                <path d="m3 10 7-7" />
+                <path d="m14 21 7-7" />
+              </svg> Trainer Mgmt</a>
+            <a href="#staff" data-admin-module="staff" onclick="switchAdminModule('staff', this); return false;"><svg
+                class="inline-icon" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4z" />
+                <path d="M20 21a8 8 0 0 0-16 0" />
+              </svg> Staff Mgmt</a>
+            <a href="#notifications" data-admin-module="notifications"
+              onclick="switchAdminModule('notifications', this); return false;"><svg class="inline-icon" width="1em"
+                height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg> Updates & Notifs</a>
+            <a href="#qr-attendance" data-admin-module="qr-attendance"
+              onclick="switchAdminModule('qr-attendance', this); return false;"><svg class="inline-icon" width="1em"
+                height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg> QR Attendance</a>
+            <a href="index.php" style="color:#ff4d4d;" onclick="logout(); return false;"><svg class="inline-icon" width="1em"
+                height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg> Logout</a>
+          </nav>
+        </aside>
+        <div class="account-main" id="adminDashboardMain">
+          <!-- User Management Modal -->
+          <div id="userModal" class="modal glass-card" style="display:none;">
+            <h3 id="userModalTitle">Add User</h3>
+            <form id="userForm" onsubmit="saveUser(event)">
+              <input type="hidden" id="userId" />
+              <div style="margin-bottom:10px;">
+                <label>Name</label>
+                <input type="text" id="userName" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Email</label>
+                <input type="email" id="userEmail" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Phone</label>
+                <input type="text" id="userPhone" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Status</label>
+                <select id="userStatus" style="width:100%;">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Membership Status</label>
+                <select id="userMembershipStatus" style="width:100%;">
+                  <option value="Active">Active</option>
+                  <option value="Expired">Expired</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="closeUserModal()"
+                style="margin-left:8px;">Cancel</button>
+            </form>
+          </div>
+          <div id="modalOverlay"
+            style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;"
+            onclick="closeUserModal()"></div>
+
+          <!-- User Details Modal -->
+          <div id="userDetailsModal" class="modal glass-card" style="display:none;">
+            <h3 id="detailName">User Details</h3>
+            <button class="btn btn-outline btn-sm" style="float:right;" onclick="closeUserDetails()">Close</button>
+            <div style="margin-top:20px;">
+              <p><strong>Email:</strong> <span id="detailEmail"></span></p>
+              <p><strong>Phone:</strong> <span id="detailPhone"></span></p>
+              <p><strong>Status:</strong> <span id="detailStatus" class="badge"></span></p>
+              <p><strong>Membership:</strong> <span id="detailMembership"></span></p>
+              <p><strong>Courses Booked:</strong> <span id="detailCourseCount">0</span></p>
+              <h4>Booked Courses</h4>
+              <ul id="detailBookedCourses"></ul>
+              <h4>Attendance History</h4>
+              <table class="table-full">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Time</th>
+                    <th>Course</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="detailAttendance"></tbody>
+              </table>
+              <h4>Notification History</h4>
+              <ul id="detailNotifications"></ul>
+              <h4>Referred Users</h4>
+              <ul id="detailReferrals"></ul>
+            </div>
+          </div>
+
+          <!-- Toast Container -->
+          <div id="toastContainer" class="toast-container"></div>
+          <div id="workoutShareMenu" style="display:none; position:fixed; z-index:2000;"></div>
+          <div id="workoutShiftWiseMenu" style="display:none; position:fixed; z-index:2000;"></div>
+
+          <!-- Global History Panel -->
+          <div id="globalHistoryPanel" class="account-panel glass-card"
+            style="display:none; border:2px solid var(--clr-primary); margin-bottom: 24px;">
+            <div class="panel-header">
+              <h3 id="historyTitle"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  style="margin-right:8px;">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="16" y1="13" x2="8" y2="13" />
+                  <line x1="16" y1="17" x2="8" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg> History Log</h3>
+              <button class="btn btn-outline btn-sm" onclick="closeHistory()">Close</button>
+            </div>
+            <div class="panel-body">
+              <ul id="historyList" style="list-style:none; padding:0;"></ul>
+            </div>
+          </div>
+
+          <!-- MODULE 0: Overview -->
+          <div id="module-overview" class="dashboard-module" style="display:block;">
+            <div class="dash-welcome reveal" style="margin-bottom: 24px;">
+              <div class="dw-text">
+                <h2>Dashboard Overview</h2>
+                <p>Quick snapshot of membership, trainers, attendance, and live notifications.</p>
+              </div>
+            </div>
+
+            <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+              <div class="dash-stat-card">
+                <div class="dsc-label">Members</div>
+                <div class="dsc-num" id="overviewMemberCount">0</div>
+              </div>
+              <div class="dash-stat-card">
+                <div class="dsc-label">Trainers</div>
+                <div class="dsc-num" id="overviewTrainerCount">0</div>
+              </div>
+              <div class="dash-stat-card">
+                <div class="dsc-label">Pending</div>
+                <div class="dsc-num" id="overviewPendingCount">0</div>
+              </div>
+              <div class="dash-stat-card">
+                <div class="dsc-label">Notifications</div>
+                <div class="dsc-num" id="overviewNotificationCount">0</div>
+              </div>
+            </div>
+
+            <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+              <div class="dash-stat-card">
+                <div class="dsc-label">Active Plans</div>
+                <div class="dsc-num" id="overviewActivePlanCount">0</div>
+              </div>
+              <div class="dash-stat-card">
+                <div class="dsc-label">Attendance Today</div>
+                <div class="dsc-num" id="overviewAttendanceCount">0</div>
+              </div>
+              <div class="dash-stat-card">
+                <div class="dsc-label">Monthly Check-ins</div>
+                <div class="dsc-num" id="overviewMonthlyAttendanceCount">0</div>
+              </div>
+              <div class="dash-stat-card">
+                <div class="dsc-label">Expiring Soon</div>
+                <div class="dsc-num" id="overviewExpiringCount">0</div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; margin-bottom: 24px;">
+              <div class="account-panel reveal glass-card">
+                <div class="panel-header">
+                  <h3>Quick Actions</h3>
+                </div>
+                <div class="panel-body">
+                  <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                    <button class="btn btn-outline btn-sm" data-admin-module="pending"
+                      onclick="switchAdminModule('pending'); return false;">Review Pending</button>
+                    <button class="btn btn-outline btn-sm" data-admin-module="notifications"
+                      onclick="switchAdminModule('notifications'); return false;">Publish Update</button>
+                    <button class="btn btn-outline btn-sm" data-admin-module="qr-attendance"
+                      onclick="switchAdminModule('qr-attendance'); return false;">Open Attendance</button>
+                    <button class="btn btn-outline btn-sm" data-admin-module="trainer"
+                      onclick="switchAdminModule('trainer'); return false;">Open Trainers</button>
+                    <button class="btn btn-outline btn-sm" data-admin-module="course"
+                      onclick="switchAdminModule('course'); return false;">Open Courses</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="account-panel reveal glass-card">
+                <div class="panel-header">
+                  <h3>System Snapshot</h3>
+                </div>
+                <div class="panel-body">
+                  <ul id="overviewSnapshotList"
+                    style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;"></ul>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <div class="account-panel reveal glass-card">
+                <div class="panel-header">
+                  <h3>Recent Notifications</h3>
+                  <button class="btn btn-outline btn-sm" data-admin-module="notifications"
+                    onclick="switchAdminModule('notifications'); return false;">View All</button>
+                </div>
+                <div class="panel-body">
+                  <div id="overviewRecentNotifications" style="display:flex; flex-direction:column; gap:12px;"></div>
+                </div>
+              </div>
+
+              <div class="account-panel reveal glass-card">
+                <div class="panel-header">
+                  <h3>Recent Activity</h3>
+                  <button class="btn btn-outline btn-sm" onclick="showHistory('General')">Open History</button>
+                </div>
+                <div class="panel-body">
+                  <div id="overviewRecentActivity" style="display:flex; flex-direction:column; gap:12px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODULE: Pending Registrations -->
+          <div id="module-pending" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3>Pending Registrations</h3>
+                <div>
+                  <button class="btn btn-outline btn-sm" onclick="renderPendingRegistrations()">Refresh</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+                  <div class="dash-stat-card" style="cursor:pointer;" onclick="setPendingSummaryView('all')">
+                    <div class="dsc-label">Total Registrations</div>
+                    <div class="dsc-num" id="pendingTotalCount">0</div>
+                  </div>
+                  <div class="dash-stat-card" style="cursor:pointer;" onclick="setPendingSummaryView('pending')">
+                    <div class="dsc-label">Pending</div>
+                    <div class="dsc-num" id="pendingPendingCount">0</div>
+                  </div>
+                  <div class="dash-stat-card" style="cursor:pointer;" onclick="setPendingSummaryView('approved')">
+                    <div class="dsc-label">Approved</div>
+                    <div class="dsc-num" id="pendingApprovedCount">0</div>
+                  </div>
+                  <div class="dash-stat-card" style="cursor:pointer;" onclick="setPendingSummaryView('rejected')">
+                    <div class="dsc-label">Rejected</div>
+                    <div class="dsc-num" id="pendingRejectedCount">0</div>
+                  </div>
+                </div>
+
+                <div class="account-panel glass-card" style="margin-bottom:24px;">
+                  <div class="panel-body" style="padding:16px;">
+                    <div class="form-row" style="grid-template-columns: 2fr 1fr 1fr;">
+                      <div class="form-group">
+                        <label>Search</label>
+                        <input type="text" id="pendingSearch" placeholder="Name, email, or mobile"
+                          oninput="renderPendingRegistrations()" />
+                      </div>
+                      <div class="form-group">
+                        <label>Status</label>
+                        <select id="pendingFilterStatus" onchange="renderPendingRegistrations()">
+                          <option value="All">All</option>
+                          <option value="Pending">Pending</option>
+                          <option value="Approved">Approved</option>
+                          <option value="Rejected">Rejected</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label>View</label>
+                        <select id="pendingViewFilter" onchange="renderPendingRegistrations()">
+                          <option value="all">All Lists</option>
+                          <option value="pending">Pending Only</option>
+                          <option value="approved">Approved Only</option>
+                          <option value="rejected">Rejected Only</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="account-panel glass-card" style="margin-bottom:24px;">
+                  <div class="panel-header">
+                    <h3>Registration Queue</h3>
+                  </div>
+                  <div class="panel-body" style="padding:0; overflow-x:auto;">
+                    <table class="table-full">
+                      <thead>
+                        <tr>
+                          <th>Full Name</th>
+                          <th>Email</th>
+                          <th>Mobile</th>
+                          <th>Reg. Date</th>
+                          <th>Status</th>
+                          <th>Admin Note</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="pendingTableBody"></tbody>
+                    </table>
+                    <div id="pendingEmpty"
+                      style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">No
+                      registrations match the current filters.</div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- MODULE 2: User Management -->
+          <div id="module-user" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3> User Management</h3>
+                <div>
+                  <button class="btn btn-outline btn-sm" onclick="renderUserTable()">View All Users</button>
+                  <button class="btn btn-primary btn-sm" onclick="openUserModal('add')">Add User</button>
+                  <button class="btn btn-outline btn-sm" onclick="showHistory('User Mgmt')">History</button>
+                </div>
+              </div>
+              <div class="panel-body" style="overflow-x:auto;">
+                <table class="table-full" style="min-width: 1100px;">
+                  <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Courses Booked</th>
+                    <th>Membership Status</th>
+                    <th>User Status</th>
+                    <th>Actions</th>
+                  </tr>
+                  <tbody id="userTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODULE 2B: User Registration -->
+          <div id="module-registration" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3> User Registration</h3>
+                <div>
+                  <button class="btn btn-outline btn-sm" onclick="renderAdminRegistrationPanel()">Refresh</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div style="margin-bottom: 18px; padding: 14px 16px; border: 1px solid var(--clr-border); border-radius: var(--radius); background: rgba(255,255,255,0.03); color: var(--clr-muted);">
+                  Create a user, trainer, or staff account here. Accounts created from this module are approved immediately so they can log in right away.
+                </div>
+                <div class="dash-stats" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 22px;">
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Approved Users</div>
+                    <div class="dsc-num" id="adminRegApprovedCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Trainers</div>
+                    <div class="dsc-num" id="adminRegTrainerCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Staff</div>
+                    <div class="dsc-num" id="adminRegStaffCount">0</div>
+                  </div>
+                </div>
+                <form id="adminRegistrationForm" onsubmit="saveAdminRegistration(event)" class="contact-form">
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Full Name</label>
+                      <input type="text" id="adminRegName" required placeholder="Arjun Kumar" />
+                    </div>
+                    <div class="form-group">
+                      <label>Role</label>
+                      <select id="adminRegRole" required>
+                        <option value="user">User</option>
+                        <option value="trainer">Trainer</option>
+                        <option value="staff">Staff</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Username / ID</label>
+                      <input type="text" id="adminRegUsername" required placeholder="USR123" />
+                    </div>
+                    <div class="form-group">
+                      <label>Password</label>
+                      <input type="text" id="adminRegPassword" required placeholder="Set a login password" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Email</label>
+                      <input type="email" id="adminRegEmail" required placeholder="name@example.com" />
+                    </div>
+                    <div class="form-group">
+                      <label>Phone</label>
+                      <input type="text" id="adminRegPhone" required placeholder="9876543210" />
+                    </div>
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label>Status</label>
+                      <select id="adminRegStatus">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Membership Status</label>
+                      <select id="adminRegMembershipStatus">
+                        <option value="Active">Active</option>
+                        <option value="Expired">Expired</option>
+                      </select>
+                    </div>
+                  </div>
+                  <label style="display:flex; align-items:center; gap:10px; margin: 8px 0 18px; color: var(--clr-muted);">
+                    <input type="checkbox" id="adminRegAutoApprove" checked style="width:auto;" />
+                    Create as approved account for immediate login
+                  </label>
+                  <button type="submit" class="btn btn-primary">Create Account</button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODULE 3: Workout Plan Management -->
+          <div id="module-workout" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3> Workout Plan Management</h3>
+                <div>
+                  <button type="button" class="btn btn-primary btn-sm" onclick="showWorkoutPlanForm('add')">Create
+                    Plan</button>
+                  <button class="btn btn-outline btn-sm" onclick="renderWorkoutAdminPanel()">Refresh</button>
+                  <button class="btn btn-outline btn-sm" onclick="openWorkoutShiftWiseMenu(event)">Shift Wise
+                    Report</button>
+                  <button class="btn btn-outline btn-sm" onclick="exportShiftReportsCSV()">Export CSV</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Total Plans</div>
+                    <div class="dsc-num" id="workoutTotalCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Morning Plans</div>
+                    <div class="dsc-num" id="workoutMorningCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Evening Plans</div>
+                    <div class="dsc-num" id="workoutEveningCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Workout History</div>
+                    <div class="dsc-num" id="workoutHistoryCount">0</div>
+                  </div>
+                </div>
+
+                <div class="dash-stats" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Morning Students</div>
+                    <div class="dsc-num" id="workoutMorningStudentCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Evening Students</div>
+                    <div class="dsc-num" id="workoutEveningStudentCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Night Students</div>
+                    <div class="dsc-num" id="workoutNightStudentCount">0</div>
+                  </div>
+                </div>
+
+                <div class="dash-stats" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Morning Trainers</div>
+                    <div class="dsc-num" id="workoutMorningTrainerCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Evening Trainers</div>
+                    <div class="dsc-num" id="workoutEveningTrainerCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Night Trainers</div>
+                    <div class="dsc-num" id="workoutNightTrainerCount">0</div>
+                  </div>
+                </div>
+
+                <div id="workoutShiftWisePanel" class="account-panel glass-card"
+                  style="display:none; margin-bottom:24px;">
+                  <div class="panel-header">
+                    <h3 style="margin:0;" id="workoutShiftWiseTitle">Shift Wise Report</h3>
+                    <button class="btn btn-outline btn-sm" type="button"
+                      onclick="closeWorkoutShiftWisePanel()">Close</button>
+                  </div>
+                  <div class="panel-body" style="padding:16px;">
+                    <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+                      <div class="dash-stat-card">
+                        <div class="dsc-label">Users</div>
+                        <div class="dsc-num" id="workoutShiftWiseUserCount">0</div>
+                      </div>
+                      <div class="dash-stat-card">
+                        <div class="dsc-label">Trainers</div>
+                        <div class="dsc-num" id="workoutShiftWiseTrainerCount">0</div>
+                      </div>
+                      <div class="dash-stat-card">
+                        <div class="dsc-label">Morning</div>
+                        <div class="dsc-num" id="workoutShiftWiseMorningCount">0</div>
+                      </div>
+                      <div class="dash-stat-card">
+                        <div class="dsc-label">Evening/Night</div>
+                        <div class="dsc-num" id="workoutShiftWiseEveningCount">0</div>
+                      </div>
+                    </div>
+                    <div id="workoutShiftWiseContent" style="display:flex; flex-direction:column; gap:12px;"></div>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 24px;">
+                  <div id="workoutPlanFormWrap" class="account-panel glass-card"
+                    style="display:none; overflow:visible; position:relative; z-index:20;">
+                    <div class="panel-header">
+                      <h3 style="margin:0;">Workout Plan Form</h3>
+                      <button class="btn btn-outline btn-sm" type="button"
+                        onclick="resetWorkoutPlanForm()">Close</button>
+                    </div>
+                    <div class="panel-body" style="padding:16px; overflow:visible;">
+                      <form id="workoutPlanForm" onsubmit="saveWorkoutPlan(event)">
+                        <input type="hidden" id="workoutPlanId" />
+                        <div style="margin-bottom:10px;">
+                          <label>Plan Name</label>
+                          <input type="text" id="workoutPlanName" required />
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Course</label>
+                          <select id="workoutPlanCourse" required
+                            style="min-height:48px; background:var(--clr-bg2); color:var(--clr-white);">
+                            <option value="">Select Course</option>
+                          </select>
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Shift</label>
+                          <select id="workoutPlanShift" required>
+                            <option value="Morning">Morning</option>
+                            <option value="Evening">Evening</option>
+                            <option value="Night">Night</option>
+                          </select>
+                        </div>
+                        <div class="form-row"
+                          style="display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom:10px;">
+                          <div>
+                            <label>Start Date</label>
+                            <input type="date" id="workoutPlanStartDate" required
+                              onchange="updateWorkoutPlanDurationHint()" />
+                          </div>
+                          <div>
+                            <label>End Date</label>
+                            <input type="date" id="workoutPlanEndDate" required
+                              onchange="updateWorkoutPlanDurationHint()" />
+                          </div>
+                        </div>
+                        <div style="margin-bottom:10px; color:var(--clr-muted); font-size:0.92rem;">
+                          Plan Days: <strong id="workoutPlanDayCount">-</strong>
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Timing</label>
+                          <input type="time" id="workoutPlanTiming" required />
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Trainer</label>
+                          <select id="workoutPlanTrainer" required></select>
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Duration</label>
+                          <input type="text" id="workoutPlanDuration" placeholder="e.g. 30 days / 4 weeks" required />
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Status</label>
+                          <select id="workoutPlanStatus">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                          </select>
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Notes</label>
+                          <textarea id="workoutPlanNotes" rows="3" style="width:100%;"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Save Plan</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="resetWorkoutPlanForm()"
+                          style="margin-left:8px;">Cancel</button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="account-panel glass-card" style="overflow-x:auto; width:100%;">
+                  <div class="panel-header">
+                    <h3 style="margin:0;">Workout Plans</h3>
+                  </div>
+                  <div class="panel-body" style="padding:0;">
+                    <table class="table-full" style="min-width: 1400px; width:100%;">
+                      <thead>
+                        <tr>
+                          <th>Plan</th>
+                          <th>Course</th>
+                          <th>Audience</th>
+                          <th>Assigned Users</th>
+                          <th>Assigned Trainers</th>
+                          <th>Assigned Staff</th>
+                          <th>Shift</th>
+                          <th>Start Date</th>
+                          <th>End Date</th>
+                          <th>Timing</th>
+                          <th>Trainer</th>
+                          <th>Duration</th>
+                          <th>Status</th>
+                          <th>Notes</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="workoutPlansBody"></tbody>
+                    </table>
+                    <div id="workoutPlansEmpty"
+                      style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">No workout
+                      plans added yet.</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- MODULE 4: Course Management -->
+        <div id="module-course" class="dashboard-module" style="display:none;">
+          <div class="account-panel reveal glass-card">
+            <div class="panel-header">
+              <h3> Course Management</h3>
+              <div>
+                <button class="btn btn-primary btn-sm" onclick="openCourseForm('add')">Add Course</button>
+                <button class="btn btn-outline btn-sm" onclick="renderCourseAdminPanel()">Refresh</button>
+                <button class="btn btn-outline btn-sm" onclick="exportCourseCSV()">Export CSV</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Total Courses</div>
+                  <div class="dsc-num" id="courseTotalCount">0</div>
+                </div>
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Categories</div>
+                  <div class="dsc-num" id="courseCategoryCount">0</div>
+                </div>
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Trainers Assigned</div>
+                  <div class="dsc-num" id="courseTrainerCount">0</div>
+                </div>
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Students Enrolled</div>
+                  <div class="dsc-num" id="courseStudentCount">0</div>
+                </div>
+              </div>
+
+              <div class="account-panel glass-card" style="margin-bottom:24px;">
+                <div class="panel-header">
+                  <h3 style="margin:0;">Course Categories</h3>
+                  <button class="btn btn-outline btn-sm" onclick="renderCourseAdminPanel()">Refresh</button>
+                </div>
+                <div class="panel-body" style="padding:16px;">
+                  <form onsubmit="addCourseCategory(event)"
+                    style="display:grid; grid-template-columns: 1fr auto; gap: 12px; align-items:end; margin-bottom:16px;">
+                    <div class="form-group" style="margin:0;">
+                      <label>New Category</label>
+                      <input type="text" id="newCourseCategory" placeholder="Example: Functional Training" />
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Add Category</button>
+                  </form>
+                  <div style="overflow-x:auto;">
+                    <table class="table-full" style="min-width: 500px;">
+                      <thead>
+                        <tr>
+                          <th>Category</th>
+                          <th>Courses</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="courseCategoryBody"></tbody>
+                    </table>
+                    <div id="courseCategoryEmpty"
+                      style="padding: 20px; text-align: center; color: var(--clr-muted); display: none;">No categories
+                      added yet.</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="account-panel glass-card" style="margin-bottom:24px;">
+                <div class="panel-body" style="padding:16px;">
+                  <div class="form-row" style="grid-template-columns: 2fr 1fr 1fr;">
+                    <div class="form-group">
+                      <label>Category</label>
+                      <select id="courseCategoryFilter" onchange="renderCourseAdminPanel()">
+                        <option value="All">All Categories</option>
+                      </select>
+                    </div>
+                    <div class="form-group">
+                      <label>Course</label>
+                      <select id="courseSelectFilter" onchange="showCourseDetails(this.value)"></select>
+                    </div>
+                    <div class="form-group">
+                      <label>Search</label>
+                      <input type="text" id="courseSearch" placeholder="Course name or trainer"
+                        oninput="renderCourseAdminPanel()" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 1fr; gap: 20px; margin-bottom: 24px;">
+                <div id="courseFormWrap" class="account-panel glass-card" style="display:none;">
+                  <div class="panel-header">
+                    <h3 style="margin:0;">Course Form</h3>
+                    <button class="btn btn-outline btn-sm" type="button" onclick="resetCourseForm()">Close</button>
+                  </div>
+                  <div class="panel-body" style="padding:16px;">
+                    <form id="courseForm" onsubmit="saveCourse(event)">
+                      <input type="hidden" id="courseId" />
+                      <div style="margin-bottom:10px;">
+                        <label>Course Name</label>
+                        <input type="text" id="courseName" required />
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Category</label>
+                        <input type="text" id="courseCategory" list="courseCategorySuggestions"
+                          placeholder="Yoga / Strength / Cardio" required />
+                        <datalist id="courseCategorySuggestions"></datalist>
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Trainer</label>
+                        <select id="courseTrainer" required></select>
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Capacity</label>
+                        <input type="number" id="courseCapacity" min="1" value="20" required />
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Status</label>
+                        <select id="courseStatus">
+                          <option value="Active">Active</option>
+                          <option value="Inactive">Inactive</option>
+                        </select>
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Description</label>
+                        <textarea id="courseDescription" rows="3" style="width:100%;"></textarea>
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Short Subtitle</label>
+                        <input type="text" id="courseSubtitle" placeholder="Short course intro" />
+                      </div>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label>Duration</label>
+                          <input type="text" id="courseDuration" placeholder="45 min" />
+                        </div>
+                        <div class="form-group">
+                          <label>Level</label>
+                          <input type="text" id="courseLevel" placeholder="All Levels" />
+                        </div>
+                      </div>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label>Schedule</label>
+                          <input type="text" id="courseSchedule" placeholder="Mon, Wed, Fri | 6:00 AM" />
+                        </div>
+                        <div class="form-group">
+                          <label>Image URL</label>
+                          <input type="text" id="courseImage" placeholder="assets/course.jpg" />
+                          <small style="display:block; margin-top:6px; color:var(--clr-muted);">Use a relative asset
+                            path like <code>assets/yoga.jpg</code> or upload an image below.</small>
+                        </div>
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Image File</label>
+                        <input type="file" id="courseImageFile" accept="image/*"
+                          onchange="handleCourseImageFileChange()" />
+                        <small style="display:block; margin-top:6px; color:var(--clr-muted);">Optional. Upload image to
+                          use directly for this course.</small>
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Image Preview</label>
+                        <div
+                          style="padding:12px; border:1px dashed var(--clr-border); border-radius:12px; background:rgba(255,255,255,0.03);">
+                          <img id="courseImagePreview" alt="Course image preview"
+                            style="width:100%; max-width:320px; height:180px; object-fit:cover; border-radius:12px; display:none;" />
+                          <div id="courseImagePreviewEmpty" style="color:var(--clr-muted); font-size:0.9rem;">No image
+                            selected yet.</div>
+                        </div>
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Highlights, one per line</label>
+                        <textarea id="courseHighlights" rows="4" style="width:100%;"
+                          placeholder="Fast calorie burn&#10;Improves fitness"></textarea>
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Membership Plans, one per line</label>
+                        <textarea id="coursePlans" rows="5" style="width:100%;"
+                          placeholder="Monthly|1799|/month|true|8 classes,Priority booking,Trainer guidance&#10;6 Months|9599|/6 months|false|48 classes,Best value for regular training,Progress tracking&#10;Yearly|17999|/year|false|Unlimited yearly access,Best yearly savings,Member perks included"></textarea>
+                      </div>
+                      <button type="submit" class="btn btn-primary btn-sm">Save Course</button>
+                      <button type="button" class="btn btn-outline btn-sm" onclick="resetCourseForm()"
+                        style="margin-left:8px;">Cancel</button>
+                    </form>
+                  </div>
+                </div>
+
+                <div class="account-panel glass-card" style="overflow-x:auto;">
+                  <div class="panel-header">
+                    <h3 style="margin:0;">All Courses</h3>
+                  </div>
+                  <div class="panel-body" style="padding:0;">
+                    <table class="table-full" style="min-width: 1100px;">
+                      <thead>
+                        <tr>
+                          <th>Course</th>
+                          <th>Category</th>
+                          <th>Trainer</th>
+                          <th>Students</th>
+                          <th>Capacity</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="courseTableBody"></tbody>
+                    </table>
+                    <div id="courseEmpty"
+                      style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">No courses
+                      added yet.</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- MODULE 5: Trainer Management -->
+        <div id="module-trainer" class="dashboard-module" style="display:none;">
+          <div class="account-panel reveal glass-card">
+            <div class="panel-header">
+              <h3> Trainer Management</h3>
+              <div>
+                <button class="btn btn-primary btn-sm" onclick="openTrainerModal('add')">Add Trainer</button>
+                <button class="btn btn-outline btn-sm" onclick="renderTrainerAdminPanel()">Refresh</button>
+                <button class="btn btn-outline btn-sm" onclick="exportShiftReportsCSV()">Export CSV</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="dash-stats" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 24px;">
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Total Trainers</div>
+                  <div class="dsc-num" id="trainerTotalCount" role="button" tabindex="0"
+                    onclick="renderTrainerAdminPanel('all')"
+                    onkeydown="if(event.key==='Enter'||event.key===' '){renderTrainerAdminPanel('all');}"
+                    style="cursor:pointer;">0</div>
+                </div>
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Active Trainers</div>
+                  <div class="dsc-num" id="trainerActiveCount" role="button" tabindex="0"
+                    onclick="renderTrainerAdminPanel('active')"
+                    onkeydown="if(event.key==='Enter'||event.key===' '){renderTrainerAdminPanel('active');}"
+                    style="cursor:pointer;">0</div>
+                </div>
+              </div>
+
+              <div class="account-panel glass-card" style="margin-bottom:24px; overflow-x:auto;">
+                <div class="panel-header">
+                  <h3 style="margin:0;">All Trainers</h3>
+                </div>
+                <div class="panel-body" style="padding:0;">
+                  <table class="table-full" style="min-width: 1100px;">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Email</th>
+                        <th>Mobile</th>
+                        <th>Specialization</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="trainerTableBody"></tbody>
+                  </table>
+                  <div id="trainerEmpty"
+                    style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">No trainers added
+                    yet.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="trainerModal" class="modal glass-card" style="display:none;">
+          <h3 id="trainerModalTitle">Add Trainer</h3>
+          <form id="trainerForm" onsubmit="saveTrainer(event)">
+            <input type="hidden" id="trainerId" />
+            <div style="margin-bottom:10px;">
+              <label>Name</label>
+              <input type="text" id="trainerName" required style="width:100%;" />
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Username</label>
+              <input type="text" id="trainerUsername" required style="width:100%;" />
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Password</label>
+              <input type="password" id="trainerPassword" required style="width:100%;" />
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Email</label>
+              <input type="email" id="trainerEmail" required style="width:100%;" />
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Mobile</label>
+              <input type="text" id="trainerMobile" required style="width:100%;" />
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Specialization</label>
+              <select id="trainerSpecialization" required style="width:100%;"></select>
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Status</label>
+              <select id="trainerStatus" style="width:100%;">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="closeTrainerModal()"
+              style="margin-left:8px;">Cancel</button>
+          </form>
+        </div>
+
+        <!-- MODULE 6: Staff Management -->
+        <div id="module-staff" class="dashboard-module" style="display:none;">
+          <div class="account-panel reveal glass-card">
+            <div class="panel-header">
+              <h3> Staff Management</h3>
+              <div>
+                <button class="btn btn-primary btn-sm" onclick="openStaffModal('add')">Add Staff</button>
+                <button class="btn btn-outline btn-sm" onclick="renderStaffAdminPanel()">Refresh</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="dash-stats" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 24px;">
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Total Staff</div>
+                  <div class="dsc-num" id="staffTotalCount" role="button" tabindex="0"
+                    onclick="renderStaffAdminPanel('all')"
+                    onkeydown="if(event.key==='Enter'||event.key===' '){renderStaffAdminPanel('all');}"
+                    style="cursor:pointer;">0</div>
+                </div>
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Active Staff</div>
+                  <div class="dsc-num" id="staffActiveCount" role="button" tabindex="0"
+                    onclick="renderStaffAdminPanel('active')"
+                    onkeydown="if(event.key==='Enter'||event.key===' '){renderStaffAdminPanel('active');}"
+                    style="cursor:pointer;">0</div>
+                </div>
+              </div>
+
+              <div class="account-panel glass-card" style="overflow-x:auto;">
+                <div class="panel-header">
+                  <h3 style="margin:0;">All Staff</h3>
+                </div>
+                <div class="panel-body" style="padding:0;">
+                  <table class="table-full" style="min-width: 1000px;">
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Username</th>
+                        <th>Password</th>
+                        <th>Email</th>
+                        <th>Mobile</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="staffTableBody"></tbody>
+                  </table>
+                  <div id="staffEmpty"
+                    style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">No staff added
+                    yet.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="staffModal" class="modal glass-card" style="display:none;">
+          <h3 id="staffModalTitle">Add Staff</h3>
+          <form id="staffForm" onsubmit="saveStaff(event)">
+            <input type="hidden" id="staffId" />
+            <div style="margin-bottom:10px;">
+              <label>Name</label>
+              <input type="text" id="staffName" required style="width:100%;" />
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Username</label>
+              <input type="text" id="staffUsername" required style="width:100%;" />
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Password</label>
+              <input type="password" id="staffPassword" required style="width:100%;" />
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Email</label>
+              <input type="email" id="staffEmail" required style="width:100%;" />
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Mobile</label>
+              <input type="text" id="staffMobile" required style="width:100%;" />
+            </div>
+            <div style="margin-bottom:10px;">
+              <label>Status</label>
+              <select id="staffStatus" style="width:100%;">
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="closeStaffModal()"
+              style="margin-left:8px;">Cancel</button>
+          </form>
+        </div>
+
+        <!-- MODULE 7: Updates and Notifications -->
+        <div id="module-notifications" class="dashboard-module" style="display:none;">
+          <div class="account-panel reveal glass-card">
+            <div class="panel-header">
+              <h3>Updates & Notifications</h3>
+              <div>
+                <button class="btn btn-primary btn-sm" onclick="openGymNotificationForm('add')">Create
+                  Notification</button>
+                <button class="btn btn-outline btn-sm" onclick="renderGymNotificationsAdminPanel()">Refresh</button>
+              </div>
+            </div>
+            <div class="panel-body">
+              <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Active Notifications</div>
+                  <div class="dsc-num" id="gymNotificationsTotalCount">0</div>
+                </div>
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Visible to Users</div>
+                  <div class="dsc-num" id="gymNotificationsUserCount">0</div>
+                </div>
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Visible to Trainers</div>
+                  <div class="dsc-num" id="gymNotificationsTrainerCount">0</div>
+                </div>
+                <div class="dash-stat-card">
+                  <div class="dsc-label">Visible to Staff</div>
+                  <div class="dsc-num" id="gymNotificationsStaffCount">0</div>
+                </div>
+              </div>
+
+              <div id="gymNotificationFormWrap" class="account-panel glass-card"
+                style="display:none; margin-bottom:24px;">
+                <div class="panel-header">
+                  <h3 id="gymNotificationFormTitle" style="margin:0;">Create Notification</h3>
+                  <button class="btn btn-outline btn-sm" type="button"
+                    onclick="closeGymNotificationForm()">Close</button>
+                </div>
+                <div class="panel-body">
+                  <form id="gymNotificationForm" onsubmit="saveGymNotification(event)">
+                    <input type="hidden" id="gymNotificationId" />
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" id="gymNotificationTitle" required />
+                      </div>
+                      <div class="form-group">
+                        <label>Audience</label>
+                        <select id="gymNotificationAudience">
+                          <option value="all">All Members, Trainers & Staff</option>
+                          <option value="users">Users Only</option>
+                          <option value="trainers">Trainers Only</option>
+                          <option value="staff">Staff Only</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Status</label>
+                        <select id="gymNotificationStatus">
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </div>
+                      <div class="form-group"></div>
+                    </div>
+                    <div class="form-group">
+                      <label>Message</label>
+                      <textarea id="gymNotificationMessage" rows="5" required></textarea>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top:12px;">
+                      <button type="submit" class="btn btn-primary btn-sm">Save Notification</button>
+                      <button type="button" class="btn btn-outline btn-sm"
+                        onclick="closeGymNotificationForm()">Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+
+              <div class="account-panel glass-card" style="overflow-x:auto;">
+                <div class="panel-header">
+                  <h3 style="margin:0;">Published Updates</h3>
+                </div>
+                <div class="panel-body" style="padding:0;">
+                  <table class="table-full" style="min-width: 980px;">
+                    <thead>
+                      <tr>
+                        <th>Title</th>
+                        <th>Audience</th>
+                        <th>Status</th>
+                        <th>Updated</th>
+                        <th>Message</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="gymNotificationsBody"></tbody>
+                  </table>
+                  <div id="gymNotificationsEmpty"
+                    style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">No notifications
+                    have been created yet.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- MODULE: QR Attendance Management -->
+        <div id="module-qr-attendance" class="dashboard-module" style="display:none;">
+          <!-- Welcome Header -->
+          <div class="dash-welcome reveal" style="margin-bottom: 24px;">
+            <div class="dw-text">
+              <h2>QR Attendance Control Panel <svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg></h2>
+              <p>Monitor live check-ins, track statistics, manage attendance records, and export reports.</p>
+            </div>
+          </div>
+
+          <!-- Statistics Grid -->
+          <div class="dash-stats reveal"
+            style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 24px;">
+            <div class="dash-stat-card glass-card"
+              style="background: var(--clr-surface); padding: 15px; border-radius: var(--radius); border: 1px solid var(--clr-border);">
+              <div class="dsc-num" id="statMembersToday"
+                style="font-family: var(--ff-head); font-size: 1.8rem; color: var(--clr-primary);">0</div>
+              <div class="dsc-label"
+                style="color: var(--clr-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                Members Today</div>
+            </div>
+            <div class="dash-stat-card glass-card"
+              style="background: var(--clr-surface); padding: 15px; border-radius: var(--radius); border: 1px solid var(--clr-border);">
+              <div class="dsc-num" id="statTrainersToday"
+                style="font-family: var(--ff-head); font-size: 1.8rem; color: #4caf50;">0</div>
+              <div class="dsc-label"
+                style="color: var(--clr-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                Trainers Today</div>
+            </div>
+            <div class="dash-stat-card glass-card"
+              style="background: var(--clr-surface); padding: 15px; border-radius: var(--radius); border: 1px solid var(--clr-border);">
+              <div class="dsc-num" id="statDailyCount"
+                style="font-family: var(--ff-head); font-size: 1.8rem; color: var(--clr-gold);">0</div>
+              <div class="dsc-label"
+                style="color: var(--clr-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Daily
+                Total</div>
+            </div>
+            <div class="dash-stat-card glass-card"
+              style="background: var(--clr-surface); padding: 15px; border-radius: var(--radius); border: 1px solid var(--clr-border);">
+              <div class="dsc-num" id="statWeeklyCount"
+                style="font-family: var(--ff-head); font-size: 1.8rem; color: #2196f3;">0</div>
+              <div class="dsc-label"
+                style="color: var(--clr-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Weekly
+                Total</div>
+            </div>
+            <div class="dash-stat-card glass-card"
+              style="background: var(--clr-surface); padding: 15px; border-radius: var(--radius); border: 1px solid var(--clr-border);">
+              <div class="dsc-num" id="statMonthlyCount"
+                style="font-family: var(--ff-head); font-size: 1.8rem; color: #e040fb;">0</div>
+              <div class="dsc-label"
+                style="color: var(--clr-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                Monthly Total</div>
+            </div>
+          </div>
+
+          <!-- Member Presence Summary -->
+          <div class="account-panel reveal glass-card"
+            style="margin-bottom: 24px; background: linear-gradient(145deg, rgba(255,107,53,0.06) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,107,53,0.15);">
+            <div class="panel-header"
+              style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+              <h3 style="margin:0; font-size: 1rem;">Member Presence View</h3>
+              <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
+                <label style="font-size:0.8rem; color:var(--clr-muted);">Date</label>
+                <input type="date" id="attendanceSnapshotDate" onchange="renderMemberAttendanceView()"
+                  onclick="this.showPicker?.()"
+                  style="padding: 8px 12px; font-size:0.9rem; min-width: 150px; cursor:pointer;">
+                <div style="position:relative; display:inline-block;">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="toggleAttendanceDropdown('all')">All
+                    View</button>
+                  <div id="attendanceAllMenu"
+                    style="display:none; position:absolute; top:calc(100% + 8px); left:0; z-index:20; min-width:180px; padding:8px; border:1px solid var(--clr-border); border-radius:14px; background:var(--clr-bg2); box-shadow:0 12px 30px rgba(0,0,0,0.35);">
+                    <button type="button" class="btn btn-outline btn-sm" style="width:100%; margin-bottom:6px;"
+                      onclick="setMemberAttendanceView('all', 'user')">Users</button>
+                    <button type="button" class="btn btn-outline btn-sm" style="width:100%; margin-bottom:6px;"
+                      onclick="setMemberAttendanceView('all', 'trainer')">Trainers</button>
+                    <button type="button" class="btn btn-outline btn-sm" style="width:100%;"
+                      onclick="setMemberAttendanceView('all', 'staff')">Staff</button>
+                  </div>
+                </div>
+                <div style="position:relative; display:inline-block;">
+                  <button type="button" class="btn btn-outline btn-sm"
+                    onclick="toggleAttendanceDropdown('present')">View Present Users</button>
+                  <div id="attendancePresentMenu"
+                    style="display:none; position:absolute; top:calc(100% + 8px); left:0; z-index:20; min-width:180px; padding:8px; border:1px solid var(--clr-border); border-radius:14px; background:var(--clr-bg2); box-shadow:0 12px 30px rgba(0,0,0,0.35);">
+                    <button type="button" class="btn btn-outline btn-sm" style="width:100%; margin-bottom:6px;"
+                      onclick="setMemberAttendanceView('present', 'user')">Users</button>
+                    <button type="button" class="btn btn-outline btn-sm" style="width:100%; margin-bottom:6px;"
+                      onclick="setMemberAttendanceView('present', 'trainer')">Trainers</button>
+                    <button type="button" class="btn btn-outline btn-sm" style="width:100%;"
+                      onclick="setMemberAttendanceView('present', 'staff')">Staff</button>
+                  </div>
+                </div>
+                <div style="position:relative; display:inline-block;">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="toggleAttendanceDropdown('absent')">View
+                    Absent Users</button>
+                  <div id="attendanceAbsentMenu"
+                    style="display:none; position:absolute; top:calc(100% + 8px); left:0; z-index:20; min-width:180px; padding:8px; border:1px solid var(--clr-border); border-radius:14px; background:var(--clr-bg2); box-shadow:0 12px 30px rgba(0,0,0,0.35);">
+                    <button type="button" class="btn btn-outline btn-sm" style="width:100%; margin-bottom:6px;"
+                      onclick="setMemberAttendanceView('absent', 'user')">Users</button>
+                    <button type="button" class="btn btn-outline btn-sm" style="width:100%; margin-bottom:6px;"
+                      onclick="setMemberAttendanceView('absent', 'trainer')">Trainers</button>
+                    <button type="button" class="btn btn-outline btn-sm" style="width:100%;"
+                      onclick="setMemberAttendanceView('absent', 'staff')">Staff</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="panel-body" style="padding: 15px 20px 20px;">
+              <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px;">
+                <div class="dash-stat-card"
+                  style="background: rgba(255,255,255,0.03); padding: 14px; border-radius: var(--radius); border: 1px solid var(--clr-border);">
+                  <div class="dsc-num" id="attendanceMemberTotalCount"
+                    style="font-family: var(--ff-head); font-size: 1.6rem; color: var(--clr-white);">0</div>
+                  <div class="dsc-label"
+                    style="color: var(--clr-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                    Total Users</div>
+                </div>
+                <div class="dash-stat-card"
+                  style="background: rgba(255,255,255,0.03); padding: 14px; border-radius: var(--radius); border: 1px solid var(--clr-border);">
+                  <div class="dsc-num" id="attendanceMemberPresentCount"
+                    style="font-family: var(--ff-head); font-size: 1.6rem; color: #4caf50;">0</div>
+                  <div class="dsc-label"
+                    style="color: var(--clr-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                    Present Users</div>
+                </div>
+                <div class="dash-stat-card"
+                  style="background: rgba(255,255,255,0.03); padding: 14px; border-radius: var(--radius); border: 1px solid var(--clr-border);">
+                  <div class="dsc-num" id="attendanceMemberAbsentCount"
+                    style="font-family: var(--ff-head); font-size: 1.6rem; color: #ff6b6b;">0</div>
+                  <div class="dsc-label"
+                    style="color: var(--clr-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                    Absent Users</div>
+                </div>
+                <div class="dash-stat-card"
+                  style="background: rgba(255,255,255,0.03); padding: 14px; border-radius: var(--radius); border: 1px solid var(--clr-border);">
+                  <div class="dsc-num" id="attendanceMemberRateCount"
+                    style="font-family: var(--ff-head); font-size: 1.6rem; color: var(--clr-gold);">0%</div>
+                  <div class="dsc-label"
+                    style="color: var(--clr-muted); font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">
+                    Present Rate</div>
+                </div>
+              </div>
+
+              <div
+                style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom: 12px;">
+                <div style="color:var(--clr-muted); font-size:0.9rem;" id="attendanceViewLabel">Showing all users</div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn btn-outline btn-sm"
+                    onclick="setMemberAttendanceView('all', 'all')">All</button>
+                  <button type="button" class="btn btn-outline btn-sm"
+                    onclick="setMemberAttendanceView('present', attendanceMemberRoleFilter)">Present</button>
+                  <button type="button" class="btn btn-outline btn-sm"
+                    onclick="setMemberAttendanceView('absent', attendanceMemberRoleFilter)">Absent</button>
+                </div>
+              </div>
+
+              <div style="overflow-x:auto;">
+                <table class="table-full" style="width:100%;">
+                  <thead>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02);">
+                      <th style="padding:12px 15px;">User Name</th>
+                      <th style="padding:12px 15px;">User ID</th>
+                      <th style="padding:12px 15px;">Role</th>
+                      <th style="padding:12px 15px;">Plan</th>
+                      <th style="padding:12px 15px;">Status</th>
+                      <th style="padding:12px 15px;">Check-in Time</th>
+                    </tr>
+                  </thead>
+                  <tbody id="attendanceMemberViewBody">
+                    <!-- Rendered dynamically -->
+                  </tbody>
+                </table>
+                <div id="attendanceMemberViewEmpty"
+                  style="padding: 28px; text-align: center; color: var(--clr-muted); display: none;">
+                  No users found for the selected view.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Two-Column Layout for Live Feed and Manual Entry -->
+          <div style="display: grid; grid-template-columns: 1fr 320px; gap: 20px; margin-bottom: 24px;">
+            <!-- Live Monitor Log -->
+            <div class="account-panel reveal glass-card"
+              style="border: 1px solid rgba(255, 107, 53, 0.2); background: linear-gradient(145deg, rgba(255,107,53,0.02) 0%, rgba(0,0,0,0) 100%);">
+              <div class="panel-header" style="display:flex; align-items:center; justify-content:between;">
+                <h3
+                  style="margin:0; font-size: 1rem; color: var(--clr-white); display:flex; align-items:center; gap:8px;">
+                  <span
+                    style="width: 8px; height: 8px; background: #22c55e; border-radius:50%; display:inline-block; animation: qr-pulse 1.5s infinite;"></span>
+                  Live Entrance Monitor
+                </h3>
+                <span style="font-size:0.75rem; color:var(--clr-muted);">Updates in real-time</span>
+              </div>
+              <div class="panel-body" style="padding: 15px; max-height: 200px; overflow-y: auto;"
+                id="liveAttendanceFeed">
+                <!-- Live Feed checkins -->
+                <div style="color: var(--clr-muted); text-align: center; padding: 20px;">No check-ins monitored in this
+                  session yet.</div>
+              </div>
+            </div>
+
+            <!-- Manual Entry Panel -->
+            <div class="account-panel reveal glass-card" id="attendance-records">
+              <div class="panel-header">
+                <h3 style="margin: 0; font-size: 1rem;">Manual Check-In</h3>
+              </div>
+              <div class="panel-body" style="padding: 15px;">
+                <form id="adminManualAttendanceForm" onsubmit="handleManualCheckin(event)"
+                  style="display:flex; flex-direction:column; gap:10px;">
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                      <label style="font-size:0.75rem; color:var(--clr-muted);">ID / Username</label>
+                      <input type="text" id="manualId" required style="padding: 6px 10px; font-size: 0.85rem;"
+                        placeholder="USR001">
+                    </div>
+                    <div>
+                      <label style="font-size:0.75rem; color:var(--clr-muted);">Role</label>
+                      <select id="manualRole" style="padding: 6px 10px; font-size: 0.85rem;">
+                        <option value="user">User</option>
+                        <option value="trainer">Trainer</option>
+                        <option value="staff">Staff</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="font-size:0.75rem; color:var(--clr-muted);">Name</label>
+                    <input type="text" id="manualName" required style="padding: 6px 10px; font-size: 0.85rem;"
+                      placeholder="Arjun Kumar">
+                  </div>
+                  <div>
+                    <label style="font-size:0.75rem; color:var(--clr-muted);">Course</label>
+                    <select id="manualCourse" style="padding: 6px 10px; font-size: 0.85rem;">
+                      <option value="">Auto detect course</option>
+                    </select>
+                  </div>
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div>
+                      <label style="font-size:0.75rem; color:var(--clr-muted);">Date</label>
+                      <input type="date" id="manualDate" required style="padding: 6px 10px; font-size: 0.85rem;">
+                    </div>
+                    <div>
+                      <label style="font-size:0.75rem; color:var(--clr-muted);">Time</label>
+                      <input type="text" id="manualTime" required style="padding: 6px 10px; font-size: 0.85rem;"
+                        placeholder="09:30 AM">
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-sm"
+                    style="width: 100%; justify-content: center; margin-top: 5px;">Add Record</button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table Filters and Search Control Panel -->
+          <div class="account-panel reveal glass-card" style="margin-bottom: 24px; background: var(--clr-bg2);">
+            <div class="panel-body" style="padding: 15px 20px;">
+              <div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1fr; gap: 15px; align-items: end;">
+                <div>
+                  <label style="font-size:0.8rem; color:var(--clr-muted); display:block; margin-bottom:5px;">Search Name
+                    / ID</label>
+                  <input type="text" id="filterSearch" placeholder="Search..." oninput="applyFilters()"
+                    style="padding: 8px 12px; font-size:0.9rem;">
+                </div>
+                <div>
+                  <label
+                    style="font-size:0.8rem; color:var(--clr-muted); display:block; margin-bottom:5px;">Role</label>
+                  <select id="filterRole" onchange="applyFilters()" style="padding: 8px 12px; font-size:0.9rem;">
+                    <option value="all">All Roles</option>
+                    <option value="user">Users</option>
+                    <option value="trainer">Trainers</option>
+                    <option value="staff">Staff</option>
+                  </select>
+                </div>
+                <div>
+                  <label
+                    style="font-size:0.8rem; color:var(--clr-muted); display:block; margin-bottom:5px;">Date</label>
+                  <input type="date" id="filterDate" onchange="applyFilters()"
+                    style="padding: 8px 12px; font-size:0.9rem;">
+                </div>
+                <div>
+                  <label
+                    style="font-size:0.8rem; color:var(--clr-muted); display:block; margin-bottom:5px;">Month</label>
+                  <select id="filterMonth" onchange="applyFilters()" style="padding: 8px 12px; font-size:0.9rem;">
+                    <option value="all">All Months</option>
+                    <option value="0">January</option>
+                    <option value="1">February</option>
+                    <option value="2">March</option>
+                    <option value="3">April</option>
+                    <option value="4">May</option>
+                    <option value="5">June</option>
+                    <option value="6">July</option>
+                    <option value="7">August</option>
+                    <option value="8">September</option>
+                    <option value="9">October</option>
+                    <option value="10">November</option>
+                    <option value="11">December</option>
+                  </select>
+                </div>
+                <div>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="clearFilters()"
+                    style="width:100%; justify-content:center; padding: 10px;">Reset Filters</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Attendance Records Table Card -->
+          <div class="account-panel reveal glass-card" id="attendance-panel">
+            <div class="panel-header" style="display: flex; align-items: center; justify-content: space-between;">
+              <h3 style="margin:0;">Attendance Records</h3>
+              <div class="btn-group">
+                <button class="btn btn-outline btn-sm" onclick="downloadPDF()">Export PDF<span class="spinner"
+                    id="pdfSpinner" hidden style="margin-left:8px;">Generating...</span></button>
+              </div>
+            </div>
+            <div class="panel-body" style="padding: 0; overflow-x: auto;">
+              <table class="table-full" style="width:100%;">
+                <thead>
+                  <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02);">
+                    <th style="padding:12px 15px;">Member Name</th>
+                    <th style="padding:12px 15px;">Member ID</th>
+                    <th style="padding:12px 15px;">Trainer Name</th>
+                    <th style="padding:12px 15px;">Role</th>
+                    <th style="padding:12px 15px;">Course</th>
+                    <th style="padding:12px 15px;">Category</th>
+                    <th style="padding:12px 15px;">Date</th>
+                    <th style="padding:12px 15px;">Time</th>
+                    <th style="padding:12px 15px;">Status</th>
+                    <th style="padding:12px 15px;">Plan</th>
+                    <th style="padding:12px 15px; text-align:right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="adminAttendanceTableBody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+              <div id="adminAttendanceEmpty"
+                style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">
+                No check-in records match the current filters.
+              </div>
+            </div>
+          </div>
+        </div>
+
+
+
+
+      </div>
+    </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo-text">IRON<span>FIT</span></div>
+        <p>Transform your body, elevate your life.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="index.php">→ Home</a></li>
+          <li><a href="about.php">→ About Us</a></li>
+          <li><a href="courses.php">→ Courses</a></li>
+          <li><a href="bmi-calculator.php">→ BMI Calculator</a></li>
+          <li><a href="contact.php">→ Contact Us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 <span>IronFit Gym</span>. All rights reserved. Designed with <svg class="inline-icon" width="1em"
+          height="1em" viewBox="0 0 24 24" fill="var(--clr-primary, #ff3d00)" stroke="none"
+          style="margin: 0 4px; display: inline; vertical-align: middle;">
+          <path
+            d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+        </svg> for fitness.</p>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/admin-protect.js"></script>
+  <script src="js/admin-dashboard.js"></script>
+  <script src="js/dashboard-mobile.js"></script>
+
+</body>
+
+</html>

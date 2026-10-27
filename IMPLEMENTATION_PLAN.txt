@@ -1,0 +1,201 @@
+GYM FINAL WEBSITE IMPLEMENTATION PLAN
+
+Project Summary
+This project is a gym management website built with:
+- Frontend: HTML, CSS, JavaScript
+- Backend: PHP
+- Database: MySQL
+
+The system includes public website pages, user login and registration, and separate dashboards for admin, staff, trainer, and members.
+
+1. Frontend Overview
+
+The frontend is everything the user sees and interacts with in the browser.
+
+Main frontend pages:
+- index.php
+- login.php
+- register.php
+- dashboard.php
+- admin-dashboard.php
+- staff-dashboard.php
+- trainer-dashboard.php
+- about.php
+- courses.php
+- contact.php
+- profile.php
+- workout-plan.php
+- notifications.php
+
+Frontend technologies:
+- HTML for page structure
+- CSS for design and layout
+- JavaScript for interactivity and API communication
+
+Frontend responsibilities:
+- Display the public website pages
+- Show login and registration forms
+- Open the correct dashboard after login
+- Switch between dashboard modules
+- Load and display data from the backend
+- Handle button clicks, forms, and user actions
+- Make the review slider attractive and responsive
+
+Main frontend JavaScript files:
+- js/auth.js
+- js/dashboard.js
+- js/admin-dashboard.js
+- js/staff-dashboard.js
+- js/trainer-dashboard.js
+- js/common-dashboard.js
+- js/sql-storage-bridge.js
+- js/main.js
+
+2. Backend Overview
+
+The backend handles the server-side logic, authentication, and database operations.
+
+Main backend files:
+- api/index.php
+- router.php
+
+Backend technologies:
+- PHP for API logic
+- PDO for database access
+- MySQL for data storage
+
+Backend responsibilities:
+- Authenticate users, trainers, staff, and admin
+- Register new users
+- Allow admin-created users to log in directly
+- Store and retrieve dashboard data
+- Manage reviews, attendance, users, trainers, and settings
+- Return JSON responses to the frontend
+
+Main backend API routes:
+- /api/login
+- /api/register
+- /api/admin/register
+- /api/users
+- /api/trainers
+- /api/reviews
+- /api/attendance
+- /api/attendance/scan
+- /api/storage/*
+
+3. Database Overview
+
+Database type:
+- MySQL only
+
+Current database name:
+- gym_final_website
+
+Main tables:
+- settings
+- users
+- trainers
+- reviews
+- attendance
+- kv_store
+
+Database responsibilities:
+- Store user accounts
+- Store trainer accounts
+- Store attendance records
+- Store reviews
+- Store application settings
+- Store synced local storage values
+
+4. Implementation Steps
+
+Step 1: Environment Setup
+- Install and verify PHP
+- Start MySQL in XAMPP
+- Make sure the database gym_final_website exists
+- Import database.sql into MySQL
+- Configure DB_HOST, DB_PORT, DB_NAME, DB_USER, and DB_PASSWORD
+- Start the PHP server on localhost:4000
+
+Step 2: Frontend Checks
+- Verify all pages open correctly
+- Check navigation links
+- Test login and registration pages
+- Test dashboard module switching
+- Improve the review slider UI
+
+Step 3: Backend Checks
+- Keep MySQL as the only database
+- Confirm SQLite is fully removed
+- Verify all API endpoints
+- Check login, registration, and approval flow
+- Ensure admin-created accounts can log in immediately
+
+Step 4: Dashboard Testing
+- Test user dashboard modules
+- Test trainer dashboard modules
+- Test staff dashboard modules
+- Test admin dashboard modules
+- Confirm modules open on the first click
+- Confirm correct redirects after login
+
+Step 5: Data Flow Testing
+- Test new user registration
+- Test admin user registration
+- Test login for approved users
+- Test review creation and loading
+- Test attendance loading and saving
+- Test backend storage synchronization
+
+Step 6: UI Improvement
+- Make the home page review slider more attractive
+- Improve card spacing and module layout
+- Keep the UI mobile responsive
+- Make admin tools easier to use
+
+5. Current Status
+
+Completed:
+- SQLite removed
+- MySQL-only backend enabled
+- Admin registration module added
+- Direct login for admin-created accounts enabled
+- Local server and database tested successfully
+
+Current local stack:
+- Frontend: HTML, CSS, JavaScript
+- Backend: PHP
+- Database: MySQL
+
+6. How to Run Locally
+
+1. Start MySQL in XAMPP.
+2. Make sure the database gym_final_website is available.
+3. Import database.sql if needed.
+4. Start the PHP server:
+   php -S localhost:4000 router.php
+5. Open:
+   http://127.0.0.1:4000/admin-dashboard.php
+
+7. Testing Checklist
+
+- Home page opens
+- Login page opens
+- Admin dashboard opens
+- User dashboard opens
+- Trainer dashboard opens
+- Staff dashboard opens
+- Login API works
+- Registration API works
+- Admin registration works
+- Attendance module works
+- Reviews module works
+- Storage sync works
+
+8. Notes
+
+- The project now uses MySQL only.
+- SQLite has been removed completely.
+- If MySQL is not running, the backend will not work.
+- The PHP backend is the central layer for all dashboard data.
+

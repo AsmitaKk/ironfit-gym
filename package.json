@@ -1,0 +1,15 @@
+{
+  "name": "gym-final-website",
+  "version": "1.0.0",
+  "description": "Gym website with simple authentication backend",
+  "main": "router.php",
+  "scripts": {
+    "start": "php -S localhost:4000 router.php",
+    "start:mysql": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\start-mysql.ps1",
+    "open": "powershell -NoProfile -ExecutionPolicy Bypass -File ..\\open-ironfit.ps1",
+    "run": "php -S localhost:4000 router.php"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {}
+}

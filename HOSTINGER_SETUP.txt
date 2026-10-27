@@ -1,0 +1,28 @@
+HOSTINGER SETUP INSTRUCTIONS
+
+1. Upload the ZIP file to your Hostinger file manager.
+2. Extract it inside the public web folder, usually `public_html` or your temporary domain folder.
+3. Create a MySQL database in Hostinger.
+4. Import `database.sql` into that MySQL database.
+5. Edit the root `.env` file and set these values:
+   - DB_HOST
+   - DB_PORT
+   - DB_NAME
+   - DB_USER
+   - DB_PASSWORD
+   - DB_CHARSET
+6. Make sure PHP and PDO MySQL are enabled on the hosting server.
+7. Open the site through your temporary domain.
+8. Verify that these paths exist in the web root after extraction:
+   - `css/style.css`
+   - `js/auth.js`
+   - `assets/gym-logo.svg`
+   - `api/index.php`
+9. If you place the project inside a subfolder, it will still work because frontend API calls are relative now.
+
+Notes:
+- This project uses MySQL only.
+- SQLite has been removed.
+- The backend API is located in `api/index.php`.
+- The main homepage is served by `index.php`.
+- Browser storage keys that persist to MySQL include `approvedUsers`, `users`, `trainers`, `pendingRegistrations`, `courseEnrollments`, `courseBookings`, `staffAttendanceRecords`, and the dashboard notification stores.

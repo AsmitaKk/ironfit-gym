@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Staff Dashboard - IronFit Gym</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/pages.css" />
+  <script src="js/sql-storage-bridge.js"></script>
+  <style>
+    .table-full { width: 100%; border-collapse: collapse; text-align: left; }
+    .table-full th, .table-full td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .account-layout { display: grid; grid-template-columns: 260px 1fr; gap: 28px; align-items: start; }
+    .account-main { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+    .dashboard-module { width: 100%; }
+    .scanner-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+    }
+    .scanner-container {
+      background: var(--clr-bg2);
+      border: 1px solid rgba(255, 107, 53, 0.3);
+      border-radius: var(--radius-lg);
+      width: 90%;
+      max-width: 480px;
+      padding: 30px;
+      position: relative;
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+    .scanner-viewfinder {
+      width: 260px;
+      height: 260px;
+      margin: 20px auto;
+      border: 3px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius);
+      position: relative;
+      overflow: hidden;
+      background: #000;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    }
+    .scanner-corner {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 3px solid var(--clr-primary);
+      z-index: 2;
+    }
+    .sc-tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+    .sc-tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+    .sc-bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+    .sc-br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+    .scanner-laser {
+      position: absolute;
+      width: calc(100% - 20px);
+      height: 2px;
+      background: var(--clr-primary);
+      box-shadow: 0 0 10px var(--clr-primary);
+      top: 10px;
+      left: 10px;
+      z-index: 1;
+      animation: laser-anim 2.5s ease-in-out infinite;
+    }
+    @keyframes laser-anim {
+      0% { top: 10px; }
+      50% { top: 248px; }
+      100% { top: 10px; }
+    }
+    .sim-btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .sim-btn {
+      padding: 10px;
+      border-radius: var(--radius);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: var(--transition);
+    }
+    .sim-btn-success { background: rgba(34, 197, 94, 0.15); color: #22c55e; border-color: rgba(34, 197, 94, 0.3); }
+    .sim-btn-success:hover { background: rgba(34, 197, 94, 0.3); }
+    .sim-btn-fail { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
+    .sim-btn-fail:hover { background: rgba(239, 68, 68, 0.3); }
+    @media (max-width: 768px) {
+      .account-layout { grid-template-columns: 1fr; }
+      .account-sidebar { position: relative; top: auto; }
+      .profile-layout, .attendance-layout { grid-template-columns: 1fr !important; }
+      .profile-details-grid { grid-template-columns: 1fr !important; }
+    }
+  </style>
+</head>
+<body class="dashboard-page">
+  <header class="site-header" id="site-header">
+    <div class="nav-container">
+      <a href="index.php" class="nav-logo">
+        <div class="logo-icon"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><path d="M11 15h2v4h-2zm3-8h2V3h-2zm0 8h2v4h-2zM4 11h3V2H4zm6-2h3V2h-3zm8 2h3V2h-3zm-3-4h2v2h-2zm-6 0h2v2H9z"/><path d="M6 15h12v6H6z" opacity="0.5"/></svg></div>
+        <div class="logo-text">IRON<span>FIT</span></div>
+      </a>
+      <nav class="nav-links" id="desktop-nav">
+        <a href="index.php">Home</a>
+        <a href="about.php">About Us</a>
+        <a href="contact.php">Contact Us</a>
+        <a href="courses.php">Courses</a>
+        <a href="courses.php">Courses</a>
+        <a href="bmi-calculator.php">BMI Calculator</a>
+        <button id="darkModeToggle" class="btn btn-sm btn-outline" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-hero">
+    <div class="page-hero-content">
+      <h1>Staff Dashboard</h1>
+      <p>Track attendance, memberships, trainers, and gym updates from one consistent control panel.</p>
+    </div>
+  </section>
+
+  <section class="section" style="background:var(--clr-bg); padding:40px 0;">
+    <div class="container">
+      <div class="account-layout">
+        <aside class="account-sidebar reveal">
+          <div class="sidebar-header">
+            <div class="sidebar-avatar">ST</div>
+            <div class="sidebar-name">Staff</div>
+          </div>
+          <nav class="sidebar-nav">
+            <a href="#" class="active" onclick="switchStaffModule('profile', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M20 21a8 8 0 1 0-16 0"/><circle cx="12" cy="8" r="4"/></svg> My Profile</a>
+            <a href="#" onclick="switchStaffModule('overview', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Overview</a>
+            <a href="#" onclick="switchStaffModule('attendance', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="m9 14 2 2 4-4"/></svg> My Attendance</a>
+            <a href="#" onclick="switchStaffModule('workout', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M6.5 6.5 17.5 17.5"/><path d="M5 12h14"/><path d="M3 10v4"/><path d="M21 10v4"/><path d="M8 8v8"/><path d="M16 8v8"/></svg> Workout Plans</a>
+            <a href="#" onclick="switchStaffModule('pending', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Pending Registrations</a>
+            <a href="#" onclick="switchStaffModule('user', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> User Mgmt</a>
+            <a href="#" onclick="switchStaffModule('trainer', this); return false;"><svg class="inline-icon" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg> Trainer Mgmt</a>
+            <a href="#" onclick="switchStaffModule('notifications', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Updates & Notifs</a>
+            <a href="#" style="color:#ff4d4d;" onclick="logout(); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Logout</a>
+          </nav>
+        </aside>
+
+        <div class="account-main" id="staffDashboardMain">
+          <div id="userModal" class="modal glass-card" style="display:none;">
+            <h3 id="userModalTitle">Add User</h3>
+            <form id="userForm" onsubmit="saveUser(event)">
+              <input type="hidden" id="userId" />
+              <div style="margin-bottom:10px;">
+                <label>Name</label>
+                <input type="text" id="userName" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Username</label>
+                <input type="text" id="userUsername" placeholder="Optional username" style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Password</label>
+                <input type="password" id="userPassword" placeholder="Optional temporary password" style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Email</label>
+                <input type="email" id="userEmail" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Phone</label>
+                <input type="text" id="userPhone" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Status</label>
+                <select id="userStatus" style="width:100%;">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Membership Status</label>
+                <select id="userMembershipStatus" style="width:100%;">
+                  <option value="Active">Active</option>
+                  <option value="Expired">Expired</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="closeUserModal()" style="margin-left:8px;">Cancel</button>
+            </form>
+          </div>
+          <div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;" onclick="closeUserModal()"></div>
+
+          <div id="userDetailsModal" class="modal glass-card" style="display:none;">
+            <h3 id="detailName">User Details</h3>
+            <button class="btn btn-outline btn-sm" style="float:right;" onclick="closeUserDetails()">Close</button>
+            <div style="margin-top:20px;">
+              <p><strong>Email:</strong> <span id="detailEmail"></span></p>
+              <p><strong>Phone:</strong> <span id="detailPhone"></span></p>
+              <p><strong>Status:</strong> <span id="detailStatus" class="badge"></span></p>
+              <p><strong>Membership:</strong> <span id="detailMembership"></span></p>
+              <h4>Attendance History</h4>
+              <table class="table-full"><thead><tr><th>Date</th><th>Time</th><th>Type</th></tr></thead><tbody id="detailAttendance"></tbody></table>
+              <h4>Notification History</h4>
+              <ul id="detailNotifications"></ul>
+              <h4>Referred Users</h4>
+              <ul id="detailReferrals"></ul>
+            </div>
+          </div>
+
+          <div id="toastContainer" class="toast-container"></div>
+
+          <div id="globalHistoryPanel" class="account-panel glass-card" style="display:none; border:2px solid var(--clr-primary); margin-bottom: 24px;">
+            <div class="panel-header">
+              <h3 id="historyTitle"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> History Log</h3>
+              <button class="btn btn-outline btn-sm" onclick="closeHistory()">Close</button>
+            </div>
+            <div class="panel-body">
+              <ul id="historyList" style="list-style:none; padding:0;"></ul>
+            </div>
+          </div>
+
+          <div id="module-profile" class="dashboard-module" style="display:none;">
+            <div class="dash-welcome reveal" style="margin-bottom: 24px;">
+              <div class="dw-text">
+                <h2>My Profile</h2>
+                <p>Personal details for the currently logged in staff account.</p>
+              </div>
+            </div>
+
+            <div id="staffProfilePanel" class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3>My Profile</h3>
+                <div>
+                  <button class="btn btn-outline btn-sm" onclick="toggleStaffProfileEdit()">Edit Profile</button>
+                  <button class="btn btn-outline btn-sm" onclick="renderStaffProfileModule()">Refresh</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div id="staffProfileView">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                    <p><strong>Full Name:</strong> <span id="profileName"></span></p>
+                    <p><strong>Username:</strong> <span id="profileUsername"></span></p>
+                    <p><strong>Email Address:</strong> <span id="profileEmail"></span></p>
+                    <p><strong>Phone Number:</strong> <span id="profilePhone"></span></p>
+                    <p><strong>Role:</strong> <span id="profileRoleLabel"></span></p>
+                    <p><strong>Status:</strong> <span id="profileStatStatus"></span></p>
+                    <p><strong>Staff ID:</strong> <span id="profileStatId"></span></p>
+                    <p><strong>Joined On:</strong> <span id="profileJoined"></span></p>
+                    <p style="grid-column: span 2;"><strong>About:</strong> <span id="profileAbout"></span></p>
+                  </div>
+                </div>
+                <div id="staffProfileEdit" style="display:none;">
+                  <form onsubmit="saveStaffProfile(event)" class="contact-form">
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="staffEditName" required style="padding: 10px; border-radius: var(--radius); border: 1px solid var(--clr-border); background: var(--clr-bg3); color: var(--clr-white);">
+                      </div>
+                      <div class="form-group">
+                        <label>Username</label>
+                        <input type="text" id="staffEditUsername" required style="padding: 10px; border-radius: var(--radius); border: 1px solid var(--clr-border); background: var(--clr-bg3); color: var(--clr-white);">
+                      </div>
+                    </div>
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="staffEditEmail" required style="padding: 10px; border-radius: var(--radius); border: 1px solid var(--clr-border); background: var(--clr-bg3); color: var(--clr-white);">
+                      </div>
+                      <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="text" id="staffEditPhone" required style="padding: 10px; border-radius: var(--radius); border: 1px solid var(--clr-border); background: var(--clr-bg3); color: var(--clr-white);">
+                      </div>
+                    </div>
+                    <div class="form-group">
+                      <label>About</label>
+                      <input type="text" id="staffEditAbout" required style="padding: 10px; border-radius: var(--radius); border: 1px solid var(--clr-border); background: var(--clr-bg3); color: var(--clr-white);">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                      <button type="submit" class="btn btn-primary">Save Changes</button>
+                      <button type="button" class="btn btn-outline" onclick="toggleStaffProfileEdit()">Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="module-attendance" class="dashboard-module" style="display:none;">
+            <div class="dash-welcome reveal" style="margin-bottom: 24px;">
+              <div class="dw-text">
+                <h2>My Attendance</h2>
+                <p>Scan the entrance QR code to mark your daily presence and review your attendance history.</p>
+              </div>
+            </div>
+
+            <div class="attendance-card reveal glass-card" id="staffAttendanceCard" style="background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px; display: flex; align-items: center; gap: 24px; transition: var(--transition);">
+              <div class="attendance-icon-wrap" style="flex-shrink: 0; width: 70px; height: 70px; background: rgba(255, 107, 53, 0.1); border: 1px solid rgba(255, 107, 53, 0.3); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; position: relative;">
+                <span class="pulse-ring" style="position: absolute; width: 100%; height: 100%; border: 2px solid var(--clr-primary); border-radius: var(--radius); opacity: 0;"></span>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--clr-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <rect x="7" y="7" width="3" height="3"/>
+                  <rect x="14" y="7" width="3" height="3"/>
+                  <rect x="7" y="14" width="3" height="3"/>
+                  <path d="M14 14h3v3h-3z"/>
+                </svg>
+              </div>
+              <div class="attendance-info" style="flex-grow: 1;">
+                <h3 style="font-family: var(--ff-sub); font-size: 1.2rem; color: var(--clr-white); margin-bottom: 4px; display: flex; align-items: center; gap: 10px; margin-top: 0;">
+                  Staff Entrance Check-In
+                  <span id="attendanceBadge" class="badge badge-gold" style="font-size: 0.7em; padding: 2px 8px;">Checking Status...</span>
+                </h3>
+                <p style="color: var(--clr-muted); font-size: 0.9rem; margin: 0; line-height: 1.5;" id="attendanceMsg">
+                  Scan the physical QR code at the entrance to log your presence today.
+                </p>
+              </div>
+              <div class="attendance-action" style="flex-shrink: 0;">
+                <button class="btn btn-primary" id="btnScanQR" onclick="openScannerModal()" style="display: inline-flex; align-items: center; gap: 8px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 5V3h2"/>
+                    <path d="M21 5V3h-2"/>
+                    <path d="M3 19v2h2"/>
+                    <path d="M21 19v2h-2"/>
+                    <path d="M8 8h1"/>
+                    <path d="M15 8h1"/>
+                    <path d="M8 15h1"/>
+                    <path d="M15 15h1"/>
+                    <path d="M12 12h.01"/>
+                  </svg>
+                  Scan Gym QR
+                </button>
+              </div>
+            </div>
+
+            <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+              <div class="dash-stat-card"><div class="dsc-label">Total Check-ins</div><div class="dsc-num" id="attendanceTotalCount">0</div></div>
+              <div class="dash-stat-card"><div class="dsc-label">This Month</div><div class="dsc-num" id="attendanceMonthCount">0</div></div>
+              <div class="dash-stat-card"><div class="dsc-label">Today</div><div class="dsc-num" id="attendanceTodayStatus">-</div></div>
+              <div class="dash-stat-card"><div class="dsc-label">Last Check-in</div><div class="dsc-num" id="attendanceLastCheckin">-</div></div>
+            </div>
+
+            <div class="attendance-layout" style="display:grid; grid-template-columns: 360px 1fr; gap: 24px; margin-bottom: 24px;">
+              <div class="account-panel reveal glass-card">
+                <div class="panel-header">
+                  <h3>Mark Attendance</h3>
+                </div>
+                <div class="panel-body">
+                  <p id="attendanceMessage" style="color:var(--clr-muted); margin-top:0;">Check in once per day to record your staff attendance.</p>
+                  <button class="btn btn-primary btn-sm" id="staffCheckinBtn" onclick="openScannerModal()" style="width:100%;">Check In Now</button>
+                </div>
+              </div>
+
+              <div class="account-panel reveal glass-card" style="overflow-x:auto;">
+                <div class="panel-header">
+                  <h3>Attendance History</h3>
+                  <button class="btn btn-outline btn-sm" onclick="renderStaffAttendanceModule()">Refresh</button>
+                </div>
+                <div class="panel-body" style="padding:0;">
+                  <table class="table-full" style="min-width: 860px;">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Device</th>
+                      </tr>
+                    </thead>
+                    <tbody id="staffAttendanceTableBody"></tbody>
+                  </table>
+                  <div id="staffAttendanceEmpty" style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">No attendance records yet.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="module-workout" class="dashboard-module" style="display:none;">
+            <div class="dash-welcome reveal" style="margin-bottom: 24px;">
+              <div class="dw-text">
+                <h2>Workout Plans</h2>
+                <p>View workout plans shared by admin or assigned to your staff account.</p>
+              </div>
+            </div>
+
+            <div class="account-panel reveal glass-card" style="margin-bottom:24px;">
+              <div class="panel-header">
+                <h3 style="margin:0;">Workout Plan Dashboard</h3>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                  <button class="btn btn-primary btn-sm" onclick="showWorkoutPlanForm('add')">Create Plan</button>
+                  <button class="btn btn-outline btn-sm" onclick="renderStaffWorkoutPlans()">Refresh</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Total Plans</div>
+                    <div class="dsc-num" id="staffWorkoutTotalCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Morning Plans</div>
+                    <div class="dsc-num" id="staffWorkoutMorningCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Evening Plans</div>
+                    <div class="dsc-num" id="staffWorkoutEveningCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Night Plans</div>
+                    <div class="dsc-num" id="staffWorkoutNightCount">0</div>
+                  </div>
+                </div>
+
+                <div class="account-panel glass-card" style="overflow-x:auto;">
+                  <div class="panel-header">
+                    <h3 style="margin:0;">Assigned Workout Plans</h3>
+                  </div>
+                  <div class="panel-body" style="padding:0;">
+                    <table class="table-full" style="min-width: 1520px; width:100%;">
+                      <thead>
+                        <tr>
+                          <th>Plan</th>
+                          <th>Course</th>
+                          <th>Audience</th>
+                          <th>Shift</th>
+                          <th>Start Date</th>
+                          <th>End Date</th>
+                          <th>Timing</th>
+                          <th>Trainer</th>
+                          <th>Duration</th>
+                          <th>Status</th>
+                          <th>Notes</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="staffWorkoutPlansBody"></tbody>
+                    </table>
+                    <div id="staffWorkoutPlansEmpty" style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">No workout plans assigned to staff yet.</div>
+                  </div>
+                </div>
+
+                <div id="workoutPlanFormWrap" class="account-panel glass-card" style="display:none; overflow:visible; position:relative; z-index:20; margin-top:24px;">
+                  <div class="panel-header">
+                    <h3 style="margin:0;">Workout Plan Form</h3>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="resetWorkoutPlanForm()">Close</button>
+                  </div>
+                  <div class="panel-body">
+                    <form id="workoutPlanForm" onsubmit="saveWorkoutPlan(event)">
+                      <input type="hidden" id="workoutPlanId" />
+                      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        <div style="margin-bottom:10px;">
+                          <label>Plan Name</label>
+                          <input type="text" id="workoutPlanName" required />
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Course</label>
+                          <select id="workoutPlanCourse" required style="min-height:48px; background:var(--clr-bg2); color:var(--clr-white);"></select>
+                        </div>
+                      </div>
+                      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        <div style="margin-bottom:10px;">
+                          <label>Shift</label>
+                          <select id="workoutPlanShift" required>
+                            <option value="Morning">Morning</option>
+                            <option value="Evening">Evening</option>
+                            <option value="Night">Night</option>
+                          </select>
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Trainer</label>
+                          <select id="workoutPlanTrainer" required></select>
+                        </div>
+                      </div>
+                      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        <div style="margin-bottom:10px;">
+                          <label>Start Date</label>
+                          <input type="date" id="workoutPlanStartDate" required onchange="updateWorkoutPlanDurationHint()" />
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>End Date</label>
+                          <input type="date" id="workoutPlanEndDate" required onchange="updateWorkoutPlanDurationHint()" />
+                        </div>
+                      </div>
+                      <div style="margin-bottom:10px; color:var(--clr-muted);">
+                        Plan Days: <strong id="workoutPlanDayCount">-</strong>
+                      </div>
+                      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        <div style="margin-bottom:10px;">
+                          <label>Timing</label>
+                          <input type="time" id="workoutPlanTiming" required />
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Duration</label>
+                          <input type="text" id="workoutPlanDuration" placeholder="e.g. 30 days / 4 weeks" required />
+                        </div>
+                      </div>
+                      <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                        <div style="margin-bottom:10px;">
+                          <label>Status</label>
+                          <select id="workoutPlanStatus">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div style="margin-bottom:10px;">
+                        <label>Notes</label>
+                        <textarea id="workoutPlanNotes" rows="3" style="width:100%;"></textarea>
+                      </div>
+                      <button type="submit" class="btn btn-primary btn-sm">Save Workout Plan</button>
+                      <button type="button" class="btn btn-outline btn-sm" onclick="resetWorkoutPlanForm()" style="margin-left:8px;">Cancel</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="module-overview" class="dashboard-module" style="display:block;">
+            <div class="dash-welcome reveal" style="margin-bottom: 24px;">
+              <div class="dw-text">
+                <h2>Dashboard Overview</h2>
+                <p>Quick snapshot of memberships, trainers, attendance, and live notifications.</p>
+              </div>
+            </div>
+
+            <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+              <div class="dash-stat-card"><div class="dsc-label">Members</div><div class="dsc-num" id="overviewMemberCount">0</div></div>
+              <div class="dash-stat-card"><div class="dsc-label">Trainers</div><div class="dsc-num" id="overviewTrainerCount">0</div></div>
+              <div class="dash-stat-card"><div class="dsc-label">Pending</div><div class="dsc-num" id="overviewPendingCount">0</div></div>
+              <div class="dash-stat-card"><div class="dsc-label">Notifications</div><div class="dsc-num" id="overviewNotificationCount">0</div></div>
+            </div>
+
+            <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+              <div class="dash-stat-card"><div class="dsc-label">Active Plans</div><div class="dsc-num" id="overviewActivePlanCount">0</div></div>
+              <div class="dash-stat-card"><div class="dsc-label">Attendance Today</div><div class="dsc-num" id="overviewAttendanceCount">0</div></div>
+              <div class="dash-stat-card"><div class="dsc-label">Monthly Check-ins</div><div class="dsc-num" id="overviewMonthlyAttendanceCount">0</div></div>
+              <div class="dash-stat-card"><div class="dsc-label">Expiring Soon</div><div class="dsc-num" id="overviewExpiringCount">0</div></div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1.2fr 0.8fr; gap: 24px; margin-bottom: 24px;">
+              <div class="account-panel reveal glass-card">
+                <div class="panel-header"><h3>Quick Actions</h3></div>
+                <div class="panel-body">
+                  <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                    <button class="btn btn-outline btn-sm" onclick="switchStaffModule('pending')">Review Pending</button>
+                    <button class="btn btn-outline btn-sm" onclick="switchStaffModule('notifications')">Publish Update</button>
+                    <button class="btn btn-outline btn-sm" onclick="switchStaffModule('user')">Open Users</button>
+                    <button class="btn btn-outline btn-sm" onclick="switchStaffModule('trainer')">Open Trainers</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="account-panel reveal glass-card">
+                <div class="panel-header"><h3>System Snapshot</h3></div>
+                <div class="panel-body">
+                  <ul id="overviewSnapshotList" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:10px;"></ul>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+              <div class="account-panel reveal glass-card">
+                <div class="panel-header">
+                  <h3>Recent Notifications</h3>
+                  <button class="btn btn-outline btn-sm" onclick="switchStaffModule('notifications')">View All</button>
+                </div>
+                <div class="panel-body">
+                  <div id="overviewRecentNotifications" style="display:flex; flex-direction:column; gap:12px;"></div>
+                </div>
+              </div>
+
+              <div class="account-panel reveal glass-card">
+                <div class="panel-header">
+                  <h3>Recent Activity</h3>
+                  <button class="btn btn-outline btn-sm" onclick="showHistory('General')">Open History</button>
+                </div>
+                <div class="panel-body">
+                  <div id="overviewRecentActivity" style="display:flex; flex-direction:column; gap:12px;"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="module-pending" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header"><h3>Pending Registrations</h3><button class="btn btn-outline btn-sm" onclick="renderPendingRegistrations()">Refresh</button></div>
+              <div class="panel-body">
+                <div class="dash-stats" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px;">
+                  <div class="dash-stat-card"><div class="dsc-label">Total</div><div class="dsc-num" id="pendingTotalCount">0</div></div>
+                  <div class="dash-stat-card"><div class="dsc-label">Pending</div><div class="dsc-num" id="pendingPendingCount">0</div></div>
+                  <div class="dash-stat-card"><div class="dsc-label">Approved</div><div class="dsc-num" id="pendingApprovedCount">0</div></div>
+                </div>
+                <div class="account-panel glass-card" style="margin-bottom:24px;">
+                  <div class="panel-header">
+                    <h3 style="margin:0;">Admission Alerts</h3>
+                    <button class="btn btn-outline btn-sm" onclick="renderAdmissionRegistrationAlerts()">Refresh</button>
+                  </div>
+                  <div class="panel-body">
+                    <div class="dash-stats" style="grid-template-columns: repeat(1, 1fr); margin-bottom: 18px;">
+                      <div class="dash-stat-card">
+                        <div class="dsc-label">Queued SMS Alerts</div>
+                        <div class="dsc-num" id="admissionAlertsCount">0</div>
+                      </div>
+                    </div>
+                    <div id="admissionAlertsEmpty" style="padding: 20px; text-align: center; color: var(--clr-muted); display: none;">No admission alerts yet.</div>
+                    <div id="admissionAlertsList" style="display:flex; flex-direction:column; gap:12px;"></div>
+                  </div>
+                </div>
+                <div class="account-panel glass-card">
+                  <div class="panel-body" style="padding:0; overflow-x:auto;">
+                    <table class="table-full">
+                      <thead><tr><th>User</th><th>Name</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+                      <tbody id="pendingTableBody"></tbody>
+                    </table>
+                    <div id="pendingEmpty" style="padding:40px; text-align:center; color:var(--clr-muted); display:none;">No pending registrations yet.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="module-user" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3>User Management</h3>
+                <div>
+                  <button class="btn btn-outline btn-sm" onclick="renderUserTable()">View All Users</button>
+                  <button class="btn btn-primary btn-sm" onclick="openUserModal('add')">Register User</button>
+                  <button class="btn btn-outline btn-sm" onclick="showHistory('User Mgmt')">History</button>
+                </div>
+              </div>
+              <div class="panel-body" style="overflow-x:auto;">
+                <table class="table-full" style="min-width: 1100px;">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Phone</th>
+                      <th>Membership Status</th>
+                      <th>User Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="userTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="module-trainer" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3>Trainer Management</h3>
+                <div>
+                  <button class="btn btn-primary btn-sm" onclick="openTrainerModal('add')">Add Trainer</button>
+                  <button class="btn btn-primary btn-sm" onclick="openTrainerShiftForm('add')">Assign Shift</button>
+                  <button class="btn btn-outline btn-sm" onclick="renderTrainerShiftPanel()">Refresh</button>
+                  <button class="btn btn-outline btn-sm" onclick="exportShiftReportsCSV()">Export CSV</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Total Trainers</div>
+                    <div class="dsc-num" id="trainerTotalCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Active Trainers</div>
+                    <div class="dsc-num" id="trainerActiveCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Morning Shift</div>
+                    <div class="dsc-num" id="trainerMorningCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Evening Shift</div>
+                    <div class="dsc-num" id="trainerEveningCount">0</div>
+                  </div>
+                </div>
+
+                <div class="account-panel glass-card" style="margin-bottom:24px; overflow-x:auto;">
+                  <div class="panel-header">
+                    <h3 style="margin:0;">All Trainers</h3>
+                  </div>
+                  <div class="panel-body" style="padding:0;">
+                    <table class="table-full" style="min-width: 1100px;">
+                      <thead>
+                        <tr>
+                          <th>Name</th>
+                          <th>Username</th>
+                          <th>Email</th>
+                          <th>Mobile</th>
+                          <th>Specialization</th>
+                          <th>Status</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="trainerTableBody"></tbody>
+                    </table>
+                    <div id="trainerEmpty" style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">No trainers added yet.</div>
+                  </div>
+                </div>
+
+                <div class="dash-stats" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 24px;">
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Total Trainers</div>
+                    <div class="dsc-num" id="trainerShiftTotalCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Morning</div>
+                    <div class="dsc-num" id="trainerShiftMorningCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Evening</div>
+                    <div class="dsc-num" id="trainerShiftEveningCount">0</div>
+                  </div>
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Night</div>
+                    <div class="dsc-num" id="trainerShiftNightCount">0</div>
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 360px 1fr; gap: 20px; margin-bottom: 24px;">
+                  <div class="account-panel glass-card">
+                    <div class="panel-header">
+                      <h3 style="margin:0;">Trainer Shift Assignment</h3>
+                    </div>
+                    <div class="panel-body" style="padding:16px;">
+                      <form id="trainerShiftForm" onsubmit="saveTrainerShiftAssignment(event)">
+                        <input type="hidden" id="trainerShiftId" />
+                        <div style="margin-bottom:10px;">
+                          <label>Trainer</label>
+                          <select id="trainerShiftTrainer" required></select>
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Shift</label>
+                          <select id="trainerShiftShift" required>
+                            <option value="Morning">Morning</option>
+                            <option value="Evening">Evening</option>
+                            <option value="Night">Night</option>
+                          </select>
+                        </div>
+                        <div style="margin-bottom:10px;">
+                          <label>Notes</label>
+                          <textarea id="trainerShiftNotes" rows="3" style="width:100%;"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Save Assignment</button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="resetTrainerShiftForm()" style="margin-left:8px;">Cancel</button>
+                      </form>
+                    </div>
+                  </div>
+
+                  <div class="account-panel glass-card" style="overflow-x:auto;">
+                    <div class="panel-header">
+                      <h3 style="margin:0;">Trainers Shift-wise</h3>
+                    </div>
+                    <div class="panel-body" style="padding:0;">
+                      <table class="table-full" style="min-width: 860px;">
+                        <thead>
+                          <tr>
+                            <th>Trainer</th>
+                            <th>Shift</th>
+                            <th>Assigned On</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody id="trainerShiftBody"></tbody>
+                      </table>
+                      <div id="trainerShiftEmpty" style="padding: 40px; text-align: center; color: var(--clr-muted); display: none;">No trainer shift assignments yet.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="trainerModal" class="modal glass-card" style="display:none;">
+            <h3 id="trainerModalTitle">Add Trainer</h3>
+            <form id="trainerForm" onsubmit="saveTrainer(event)">
+              <input type="hidden" id="trainerId" />
+              <div style="margin-bottom:10px;">
+                <label>Name</label>
+                <input type="text" id="trainerName" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Username</label>
+                <input type="text" id="trainerUsername" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Password</label>
+                <input type="password" id="trainerPassword" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Email</label>
+                <input type="email" id="trainerEmail" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Mobile</label>
+                <input type="text" id="trainerMobile" required style="width:100%;" />
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Specialization</label>
+                <select id="trainerSpecialization" required style="width:100%;"></select>
+              </div>
+              <div style="margin-bottom:10px;">
+                <label>Status</label>
+                <select id="trainerStatus" style="width:100%;">
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primary btn-sm">Save</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="closeTrainerModal()" style="margin-left:8px;">Cancel</button>
+            </form>
+          </div>
+
+          <div id="module-notifications" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header"><h3>Updates & Notifications</h3></div>
+              <div class="panel-body">
+                <div class="dash-stats" style="grid-template-columns: repeat(1, 1fr); margin-bottom: 24px;">
+                  <div class="dash-stat-card">
+                    <div class="dsc-label">Active Notices</div>
+                    <div class="dsc-num" id="staffNotificationsCount">0</div>
+                  </div>
+                </div>
+                <div id="staffNotificationsEmpty" style="padding: 24px; text-align: center; color: var(--clr-muted); display: none;">No active notifications for staff right now.</div>
+                <div id="staffNotificationsList" style="display:flex; flex-direction:column; gap:12px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo-text">IRON<span>FIT</span></div>
+        <p>Transform your body, elevate your life.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="index.php">→ Home</a></li>
+          <li><a href="about.php">→ About Us</a></li>
+          <li><a href="courses.php">→ Courses</a></li>
+          <li><a href="courses.php">→ Courses</a></li>
+          <li><a href="bmi-calculator.php">→ BMI Calculator</a></li>
+          <li><a href="contact.php">→ Contact Us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 <span>IronFit Gym</span>. All rights reserved. Designed with <svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="var(--clr-primary, #ff3d00)" stroke="none" style="margin: 0 4px; display: inline; vertical-align: middle;"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> for fitness.</p>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/staff-protect.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="js/common-dashboard.js"></script>
+  <script src="js/admin-dashboard.js"></script>
+  <script src="js/staff-dashboard.js"></script>
+  <script src="js/dashboard-mobile.js"></script>
+
+  <div class="scanner-overlay" id="qrScannerModal">
+    <div class="scanner-container">
+      <button onclick="closeScannerModal()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; color: var(--clr-text); font-size: 28px; cursor: pointer; z-index: 10;">&times;</button>
+      <h3 style="font-family: var(--ff-sub); font-size: 1.4rem; color: var(--clr-white); margin-bottom: 5px; margin-top: 0;">Scan Gym QR Code</h3>
+      <p style="color: var(--clr-muted); font-size: 0.85rem; margin-bottom: 20px;">Position the IronFit entrance QR code within the frame to check in.</p>
+
+      <div class="scanner-viewfinder" id="viewfinder">
+        <div class="scanner-corner sc-tl"></div>
+        <div class="scanner-corner sc-tr"></div>
+        <div class="scanner-corner sc-bl"></div>
+        <div class="scanner-corner sc-br"></div>
+        <div class="scanner-laser" id="scannerLaser"></div>
+        <div id="reader" style="width:100%; height:100%;"></div>
+      </div>
+
+      <div id="scannerFeedback" style="min-height: 24px; font-size: 0.9rem; margin: 15px 0; font-weight: 500; color: var(--clr-muted);">
+        Initializing camera...
+      </div>
+
+      <div style="border-top: 1px solid var(--clr-border); padding-top: 15px; margin-top: 15px;">
+        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--clr-muted); margin-bottom: 10px; font-weight: 600;">Testing / Simulation Panel</div>
+        <div style="margin: 10px auto; width: 120px; height: 120px; border: 1px solid var(--clr-border); padding: 5px; background: #fff; border-radius: var(--radius);">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=IRONFIT_ENTRANCE_QR&color=ff6b35&bgcolor=ffffff" alt="Entrance QR Code" style="width: 100%; height: 100%; object-fit: contain;" />
+        </div>
+        <div style="font-size: 0.7rem; color: var(--clr-muted); margin-bottom: 12px;">Entrance QR Value: <code style="color: var(--clr-primary); font-weight: bold;">IRONFIT_ENTRANCE_QR</code></div>
+        <div class="sim-btn-group">
+          <button type="button" class="sim-btn sim-btn-success" onclick="simulateScan('IRONFIT_ENTRANCE_QR')">Simulate Valid Scan</button>
+          <button type="button" class="sim-btn sim-btn-fail" onclick="simulateScan('INVALID_CODE')">Simulate Invalid Scan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

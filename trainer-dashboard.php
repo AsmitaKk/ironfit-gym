@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trainer Dashboard — IronFit Gym</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/pages.css" />
+  <script src="js/sql-storage-bridge.js"></script>
+<style>
+.table-full { width: 100%; border-collapse: collapse; text-align: left; }
+.table-full th, .table-full td { padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    @keyframes qr-pulse {
+      0% { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+    .pulse-ring {
+      animation: qr-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    .scanner-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 10000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+    }
+    .scanner-container {
+      background: var(--clr-bg2);
+      border: 1px solid rgba(255, 107, 53, 0.3);
+      border-radius: var(--radius-lg);
+      width: 90%;
+      max-width: 480px;
+      padding: 30px;
+      position: relative;
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+    .scanner-viewfinder {
+      width: 260px;
+      height: 260px;
+      margin: 20px auto;
+      border: 3px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius);
+      position: relative;
+      overflow: hidden;
+      background: #000;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    }
+    .scanner-corner {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border: 3px solid var(--clr-primary);
+      z-index: 2;
+    }
+    .sc-tl { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+    .sc-tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
+    .sc-bl { bottom: 10px; left: 10px; border-right: none; border-top: none; }
+    .sc-br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+    
+    .scanner-laser {
+      position: absolute;
+      width: calc(100% - 20px);
+      height: 2px;
+      background: var(--clr-primary);
+      box-shadow: 0 0 10px var(--clr-primary);
+      top: 10px;
+      left: 10px;
+      z-index: 1;
+      animation: laser-anim 2.5s ease-in-out infinite;
+    }
+    @keyframes laser-anim {
+      0% { top: 10px; }
+      50% { top: 248px; }
+      100% { top: 10px; }
+    }
+    .sim-btn-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .sim-btn {
+      padding: 10px;
+      border-radius: var(--radius);
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.1);
+      transition: var(--transition);
+    }
+    .sim-btn-success { background: rgba(34, 197, 94, 0.15); color: #22c55e; border-color: rgba(34, 197, 94, 0.3); }
+    .sim-btn-success:hover { background: rgba(34, 197, 94, 0.3); }
+    .sim-btn-fail { background: rgba(239, 68, 68, 0.15); color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
+    .sim-btn-fail:hover { background: rgba(239, 68, 68, 0.3); }
+
+    @media (max-width: 768px) {
+      .site-footer {
+        display: none !important;
+      }
+    }
+</style>
+</head>
+<body class="dashboard-page">
+  <!-- HEADER -->
+  <header class="site-header" id="site-header">
+    <div class="nav-container">
+      <a href="index.php" class="nav-logo">
+        <div class="logo-icon"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor"><path d="M11 15h2v4h-2zm3-8h2V3h-2zm0 8h2v4h-2zM4 11h3V2H4zm6-2h3V2h-3zm8 2h3V2h-3zm-3-4h2v2h-2zm-6 0h2v2H9z"/><path d="M6 15h12v6H6z" opacity="0.5"/></svg></div>
+        <div class="logo-text">IRON<span>FIT</span></div>
+      </a>
+      <nav class="nav-links" id="desktop-nav">
+        <a href="index.php">Home</a>
+        <a href="about.php">About Us</a>
+        <a href="contact.php">Contact Us</a>
+        <a href="courses.php">Courses</a>
+        <a href="courses.php">Courses</a>
+        <a href="bmi-calculator.php">BMI Calculator</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-hero">
+    <div class="page-hero-content">
+      <h1>Trainer Dashboard</h1>
+      <p>Manage your members, workout plans, schedules, and communications.</p>
+    </div>
+  </section>
+
+  <section class="section" style="background:var(--clr-bg); padding:40px 0;">
+    <div class="container">
+      <div class="account-layout">
+        <aside class="account-sidebar reveal">
+          <div class="sidebar-header">
+            <div class="sidebar-avatar">TR</div>
+            <div class="sidebar-name">Trainer</div>
+          </div>
+          <nav class="sidebar-nav">
+            <a href="#" class="active" onclick="switchTrainerModule('profile', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> My Profile</a>
+            <a href="#" onclick="switchTrainerModule('my-attendance', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> My Attendance</a>
+            <a href="#" onclick="switchTrainerModule('count', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Course Count</a>
+            <a href="#" onclick="switchTrainerModule('about', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"/></svg> About Trainer</a>
+            <a href="#" onclick="switchTrainerModule('notifications', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> Notifications</a>
+            <a href="#" onclick="switchTrainerModule('courses', this); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Courses</a>
+            <a href="#" onclick="switchTrainerModule('workout', this); return false;"><svg class="inline-icon" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg> Workout Plans</a>
+            <a href="#" style="color:#ff4d4d;" onclick="logout(); return false;"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Logout</a>
+          </nav>
+        </aside>
+        <div class="account-main" id="trainerDashboardMain">
+
+          <!-- Global History Panel -->
+          <div id="globalHistoryPanel" class="account-panel glass-card" style="display:none; border:2px solid var(--clr-primary);">
+            <div class="panel-header">
+              <h3 id="historyTitle"><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> History Log</h3>
+              <button class="btn btn-outline btn-sm" onclick="closeHistory()">Close</button>
+            </div>
+            <div class="panel-body">
+              <ul id="historyList" style="list-style:none; padding:0;"></ul>
+            </div>
+          </div>
+
+          <!-- MODULE 1: My Profile -->
+          <div id="module-profile" class="dashboard-module" style="display:block;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg> My Profile</h3>
+                <div>
+                  <button class="btn btn-outline btn-sm" onclick="editRow('profile')">Edit</button>
+                  <button class="btn btn-outline btn-sm" onclick="showHistory('My Profile')">History</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <p><strong>Trainer ID:</strong> <span id="v-trainer-id">TRN001</span></p>
+                <p><strong>Name:</strong> <span id="v-trainer-name">Vikram Kumar</span></p>
+                <p><strong>Specialization:</strong> <span id="v-trainer-spec">HIIT</span></p>
+                <p><strong>Contact:</strong> <span id="v-trainer-phone">9876543211</span></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODULE: My Attendance History -->
+          <div id="module-my-attendance" class="dashboard-module" style="display:none;">
+            <!-- Attendance Card (Glassmorphism) -->
+            <div class="attendance-card reveal glass-card" id="trainerAttendanceCard" style="background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px; box-shadow: var(--shadow); position: relative; overflow: hidden; display: flex; align-items: center; gap: 24px; transition: var(--transition);">
+              <div style="position: absolute; top: -50px; right: -50px; width: 150px; height: 150px; background: radial-gradient(circle, rgba(255, 107, 53, 0.15) 0%, transparent 70%); pointer-events: none;"></div>
+              <div class="attendance-icon-wrap" style="flex-shrink: 0; width: 70px; height: 70px; background: rgba(255, 107, 53, 0.1); border: 1px solid rgba(255, 107, 53, 0.3); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; position: relative;">
+                <span class="pulse-ring" style="position: absolute; width: 100%; height: 100%; border: 2px solid var(--clr-primary); border-radius: var(--radius); opacity: 0;"></span>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--clr-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                  <rect x="7" y="7" width="3" height="3"/>
+                  <rect x="14" y="7" width="3" height="3"/>
+                  <rect x="7" y="14" width="3" height="3"/>
+                  <path d="M14 14h3v3h-3z"/>
+                </svg>
+              </div>
+              <div class="attendance-info" style="flex-grow: 1;">
+                <h3 style="font-family: var(--ff-sub); font-size: 1.2rem; color: var(--clr-white); margin-bottom: 4px; display: flex; align-items: center; gap: 10px; margin-top: 0;">
+                  Gym Entrance Check-In
+                  <span id="attendanceBadge" class="badge badge-gold" style="font-size: 0.7em; padding: 2px 8px;">Checking Status...</span>
+                </h3>
+                <p style="color: var(--clr-muted); font-size: 0.9rem; margin: 0; line-height: 1.5;" id="attendanceMsg">
+                  Scan the physical QR code at the entrance to log your presence today.
+                </p>
+              </div>
+              <div class="attendance-action" style="flex-shrink: 0;">
+                <button class="btn btn-primary" id="btnScanQR" onclick="openScannerModal()" style="display: inline-flex; align-items: center; gap: 8px;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                  Scan Gym QR
+                </button>
+              </div>
+            </div>
+
+            <div class="dash-welcome reveal" style="margin-bottom: 24px;">
+              <div class="dw-text">
+                <h2>My Attendance History <svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></h2>
+                <p>Track your check-in history as an IronFit Trainer.</p>
+              </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 240px 1fr; gap: 20px; align-items: start;">
+              <!-- Monthly Summary Count Card -->
+              <div class="account-panel reveal glass-card" style="background: var(--clr-surface); border: 1px solid var(--clr-border);">
+                <div class="panel-header">
+                  <h3 style="margin: 0; font-size: 0.95rem;">Monthly Attendance</h3>
+                </div>
+                <div class="panel-body" style="text-align: center; padding: 30px 20px;">
+                  <div id="monthlyAttendanceCount" style="font-family: var(--ff-head); font-size: 4rem; color: var(--clr-primary); line-height: 1; margin-bottom: 5px;">0</div>
+                  <div style="color: var(--clr-muted); font-size: 0.85rem; font-weight: 500; text-transform: uppercase; letter-spacing: 1px;">Days checked in</div>
+                </div>
+              </div>
+              
+              <!-- Attendance Log Table -->
+              <div class="account-panel reveal glass-card" style="background: var(--clr-surface); border: 1px solid var(--clr-border); flex-grow: 1;">
+                <div class="panel-header">
+                  <h3 style="margin: 0;">Attendance Log</h3>
+                </div>
+                <div class="panel-body" style="padding: 0;">
+                  <table style="width: 100%; border-collapse: collapse; text-align: left;" class="table-full">
+                    <thead>
+                      <tr style="border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.02);">
+                        <th style="padding: 15px 20px; font-weight: 600; font-size: 0.9rem;">Date</th>
+                        <th style="padding: 15px 20px; font-weight: 600; font-size: 0.9rem;">Time</th>
+                        <th style="padding: 15px 20px; font-weight: 600; font-size: 0.9rem;">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody id="trainerAttendanceLogBody">
+                      <!-- Rendered by JS -->
+                    </tbody>
+                  </table>
+                  <div id="trainerAttendanceEmptyMsg" style="padding: 30px; text-align: center; color: var(--clr-muted); display: none;">
+                    No attendance records found. Scan the gym entrance QR code to check in.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODULE 2: Course-wise Student Count -->
+          <div id="module-count" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Course-wise Student Count</h3>
+                <div><button class="btn btn-outline btn-sm" onclick="showHistory('Course-wise Student Count')">History</button></div>
+              </div>
+              <div class="panel-body">
+                <div id="trainerCourseCountSummary" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:20px;"></div>
+                <div style="overflow-x:auto;">
+                  <table class="table-full" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                      <tr style="border-bottom:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.02);">
+                        <th style="padding:14px 16px; text-align:left;">Course</th>
+                        <th style="padding:14px 16px; text-align:left;">Category</th>
+                        <th style="padding:14px 16px; text-align:left;">Student Count</th>
+                        <th style="padding:14px 16px; text-align:left;">Trainer</th>
+                      </tr>
+                    </thead>
+                    <tbody id="trainerCourseCountBody"></tbody>
+                  </table>
+                  <div id="trainerCourseCountEmpty" style="display:none; padding:24px; text-align:center; color:var(--clr-muted);">No course assignments or enrollments found for this trainer.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODULE 3: About Trainer -->
+          <div id="module-about" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"/></svg> About Trainer (Bio)</h3>
+                <div>
+                  <button class="btn btn-outline btn-sm" onclick="editRow('about')">Edit Bio</button>
+                  <button class="btn btn-outline btn-sm" onclick="showHistory('About Trainer')">History</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <p>"Expert in high intensity interval training. Over 10 years of experience transforming lives through functional fitness."</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODULE 4: Notifications -->
+          <div id="module-notifications" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3>Updates & Notifications</h3>
+                <div>
+                  <span class="badge badge-primary" id="trainerNotificationsCount">0</span>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div id="trainerNotificationsList" style="display:flex; flex-direction:column; gap:15px;"></div>
+                <div id="trainerNotificationsEmpty" style="padding:30px; text-align:center; color:var(--clr-muted); display:none;">No active notifications right now.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODULE 6: Courses -->
+          <div id="module-courses" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3><svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:8px;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> Assigned Courses</h3>
+                <div><button class="btn btn-outline btn-sm" onclick="showHistory('Courses')">History</button></div>
+              </div>
+              <div class="panel-body">
+                <table class="table-full">
+                  <tr><th>Course</th><th>Schedule</th><th>Enrolled</th><th>Actions</th></tr>
+                  <tr>
+                    <td>HIIT Blast</td><td>M, W, F 6:00 AM</td><td>20</td>
+                    <td><button class="btn btn-outline btn-sm" onclick="editRow('course-1')">Edit</button></td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- MODULE 7: Workout Plans -->
+          <div id="module-workout" class="dashboard-module" style="display:none;">
+            <div class="account-panel reveal glass-card">
+              <div class="panel-header">
+                <h3><svg class="inline-icon" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6.5 6.5 11 11"/><path d="m21 21-1-1"/><path d="m3 3 1 1"/><path d="m18 22 4-4"/><path d="m2 6 4-4"/><path d="m3 10 7-7"/><path d="m14 21 7-7"/></svg> Workout Plans</h3>
+                <div>
+                  <button class="btn btn-outline btn-sm" onclick="showHistory('Workout Plans')">History</button>
+                </div>
+              </div>
+              <div class="panel-body">
+                <div id="trainerWorkoutPlans" style="display:flex; flex-direction:column; gap:15px;"></div>
+                <div id="trainerWorkoutPlansEmpty" style="padding:30px; text-align:center; color:var(--clr-muted); display:none;">No workout plans assigned to you yet.</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div class="logo-text">IRON<span>FIT</span></div>
+        <p>Transform your body, elevate your life.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="index.php">→ Home</a></li>
+          <li><a href="about.php">→ About Us</a></li>
+          <li><a href="courses.php">→ Courses</a></li>
+          <li><a href="courses.php">→ Courses</a></li>
+          <li><a href="bmi-calculator.php">→ BMI Calculator</a></li>
+          <li><a href="contact.php">→ Contact Us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 <span>IronFit Gym</span>. All rights reserved. Designed with <svg class="inline-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="var(--clr-primary, #ff3d00)" stroke="none" style="margin: 0 4px; display: inline; vertical-align: middle;"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg> for fitness.</p>
+    </div>
+  </footer>
+
+  <script src="js/trainer-protect.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/trainer-dashboard.js"></script>
+  <script src="js/dashboard-mobile.js"></script>
+  <script src="js/main.js"></script>
+
+  <!-- ===== QR SCANNER MODAL ===== -->
+  <div class="scanner-overlay" id="qrScannerModal">
+    <div class="scanner-container">
+      <button onclick="closeScannerModal()" style="position: absolute; top: 15px; right: 20px; background: none; border: none; color: var(--clr-text); font-size: 28px; cursor: pointer; z-index: 10;">&times;</button>
+      
+      <h3 style="font-family: var(--ff-sub); font-size: 1.4rem; color: var(--clr-white); margin-bottom: 5px; margin-top: 0;">Scan Gym QR Code</h3>
+      <p style="color: var(--clr-muted); font-size: 0.85rem; margin-bottom: 20px;">Position the IronFit entrance QR code within the frame to check in.</p>
+      
+      <!-- Viewfinder with scanning laser -->
+      <div class="scanner-viewfinder" id="viewfinder">
+        <div class="scanner-corner sc-tl"></div>
+        <div class="scanner-corner sc-tr"></div>
+        <div class="scanner-corner sc-bl"></div>
+        <div class="scanner-corner sc-br"></div>
+        <div class="scanner-laser" id="scannerLaser"></div>
+        <div id="reader" style="width: 100%; height: 100%;"></div>
+      </div>
+      
+      <div id="scannerFeedback" style="min-height: 24px; font-size: 0.9rem; margin: 15px 0; font-weight: 500; color: var(--clr-muted);">
+        Initializing camera...
+      </div>
+      
+      <!-- Simulation Controls -->
+      <div style="border-top: 1px solid var(--clr-border); padding-top: 15px; margin-top: 15px;">
+        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: var(--clr-muted); margin-bottom: 10px; font-weight: 600;">Testing / Simulation Panel</div>
+        
+        <!-- Entrance QR code preview -->
+        <div style="margin: 10px auto; width: 120px; height: 120px; border: 1px solid var(--clr-border); padding: 5px; background: #fff; border-radius: var(--radius);">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=IRONFIT_ENTRANCE_QR&color=ff6b35&bgcolor=ffffff" alt="Entrance QR Code" style="width: 100%; height: 100%; object-fit: contain;" />
+        </div>
+        <div style="font-size: 0.7rem; color: var(--clr-muted); margin-bottom: 12px;">Entrance QR Value: <code style="color: var(--clr-primary); font-weight: bold;">IRONFIT_ENTRANCE_QR</code></div>
+
+        <div class="sim-btn-group">
+          <button type="button" class="sim-btn sim-btn-success" onclick="simulateScan('IRONFIT_ENTRANCE_QR')">Simulate Valid Scan</button>
+          <button type="button" class="sim-btn sim-btn-fail" onclick="simulateScan('INVALID_CODE')">Simulate Invalid Scan</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
